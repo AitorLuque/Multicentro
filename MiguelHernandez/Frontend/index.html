@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CEIP Miguel Hernández — Control de Reservas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:     #1a2744;
+  --navy-mid: #243257;
+  --navy-lt:  #2e3f6f;
+  --gold:     #c9922a;
+  --gold-lt:  #e8b04a;
+  --cream:    #f8f6f1;
+  --white:    #ffffff;
+  --gray-1:   #f2f1ee;
+  --gray-2:   #e5e3dd;
+  --gray-3:   #b0aaa0;
+  --gray-4:   #706a60;
+  --text:     #1e1c18;
+  --text-muted:#706a60;
+  --green:    #1e7c4a;
+  --green-lt: #e6f4ed;
+  --red:      #b52020;
+  --red-lt:   #fbebeb;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Source Sans 3', sans-serif; background: var(--cream); color: var(--text); display: flex; min-height: 100vh; }
+
+/* Login */
+.login-screen { position: fixed; inset: 0; background: var(--navy); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.login-card { background: var(--white); padding: 40px; border-radius: 8px; width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border-top: 5px solid var(--gold); }
+.login-logo-container { text-align: center; margin-bottom: 25px; }
+.login-logo-container img { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--gold); object-fit: cover; margin-bottom: 10px; }
+
+/* Layout general */
+.sidebar { width: 280px; background: var(--navy); color: var(--white); display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid var(--navy-mid); }
+.main-content { flex: 1; display: flex; flex-direction: column; overflow-x: hidden; }
+.top-bar { height: 70px; background: var(--white); border-bottom: 1px solid var(--gray-2); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
+
+/* Elementos comunes */
+.brand-header { display: flex; align-items: center; gap: 14px; padding: 22px 18px; background-color: var(--navy); border-bottom: 1px solid var(--navy-mid); }
+.menu-nav { list-style: none; padding: 20px 0; flex: 1; }
+.menu-nav li { padding: 12px 25px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--gray-2); font-weight: 500; transition: all 0.2s; }
+.menu-nav li:hover, .menu-nav li.active { background: var(--navy-mid); color: var(--gold); border-left: 4px solid var(--gold); padding-left: 21px; }
+.view-panel { padding: 40px; display: none; }
+.view-panel.active { display: block; }
+
+/* Componentes Visuales del Formulario y Tablas */
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: var(--gray-4); }
+.form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--gray-2); border-radius: 4px; font-family: inherit; font-size: 0.95rem; }
+.form-control:focus { outline: none; border-color: var(--gold); }
+.btn { padding: 10px 20px; border: none; border-radius: 4px; font-family: inherit; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-primary { background: var(--navy); color: var(--white); }
+.btn-primary:hover { background: var(--navy-lt); }
+.btn-gold { background: var(--gold); color: var(--white); }
+.btn-gold:hover { background: var(--gold-lt); }
+
+.grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; margin-bottom: 40px; }
+.stat-card { background: var(--white); padding: 25px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-left: 4px solid var(--gold); }
+.stat-card h3 { font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+.stat-card .value { font-size: 2rem; font-weight: 700; color: var(--navy); margin-top: 5px; }
+
+.table-container { background: var(--white); border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; margin-top: 20px; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td { padding: 14px 20px; border-bottom: 1px solid var(--gray-1); }
+th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
+
+/* Grid de ordenadores */
+.grid-pc-layout { display: inline-grid; gap: 12px; background: var(--white); padding: 25px; border-radius: 8px; border: 1px solid var(--gray-2); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+.pc-node { width: 65px; height: 65px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: transform 0.1s; border: 2px solid transparent; }
+.pc-node:hover { transform: scale(1.05); }
+.pc-ok { background: var(--green-lt); color: var(--green); border-color: #c2e7d3; }
+.pc-ko { background: var(--red-lt); color: var(--red); border-color: #f5c6c6; }
+.pc-reparacion { background: #fef3d6; color: var(--gold); border-color: #fbe3a5; }
+
+/* Badges */
+.badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
+.badge-red { background: var(--red-lt); color: var(--red); }
+.badge-blue { background: #e8f0fe; color: #1a73e8; }
+.badge-amber { background: #fef3d6; color: #b06000; }
+.badge-green { background: var(--green-lt); color: var(--green); }
+.badge-gray { background: var(--gray-1); color: var(--gray-4); }
+
+/* Modales */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 1000; }
+.modal-overlay.active { display: flex; }
+.modal-window { background: var(--white); padding: 30px; border-radius: 6px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo-container">
+      <img src="MIGUEL_HERNANDEZ_LOGO.jpg" alt="Logo CEIP Miguel Hernández">
+      <h2 style="font-family: 'Playfair Display', serif; color: var(--navy); font-size: 1.6rem;">CEIP Miguel Hernández</h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 2px;">Sistema de Gestión de Recursos</p>
+    </div>
+    <div id="loginError" style="color: var(--red); background: var(--red-lt); padding: 10px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 15px; display: none;"></div>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Usuario o Correo Electrónico</label>
+        <input type="text" id="loginEmail" class="form-control" placeholder="Ej: rberben o admin@miguelhernandez.es" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 25px;">
+        <label>Contraseña</label>
+        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Iniciar Sesión</button>
+    </form>
+  </div>
+</div>
+
+<aside class="sidebar">
+  <div class="brand-header">
+    <img src="./logo.jpg" alt="Logo Centro" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover;">
+    <div>
+      <h1 style="font-family: 'Playfair Display', serif; color: var(--white); font-size: 1.15rem; font-weight: 700; line-height: 1.2;">CEIP Miguel Hernández</h1>
+      <span style="color: var(--gold); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Módulo de Reservas</span>
+    </div>
+  </div>
+  <ul class="menu-nav">
+    <li class="active" onclick="switchView('dashboard')">📊 Resumen General</li>
+    <li onclick="switchView('reservas')">🏫 Reservar Aulas</li>
+    <li onclick="switchView('materiales')">📦 Préstamos Material</li>
+    <li onclick="switchView('ordenadores')">💻 Mapa de Ordenadores</li>
+  </ul>
+  <div style="padding: 20px; border-top: 1px solid var(--navy-mid); text-align: center;">
+    <button class="btn btn-gold" onclick="logout()" style="width: 100%; font-size: 0.85rem; padding: 8px;">Cerrar Sesión</button>
+  </div>
+</aside>
+
+<main class="main-content">
+  <header class="top-bar">
+    <h2 id="viewTitle" style="font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--navy);">Resumen General</h2>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span id="userBadge" class="badge badge-blue" style="font-size: 0.85rem; padding: 6px 12px;">Profesor</span>
+      <strong id="userName" style="color: var(--navy);">Cargando...</strong>
+    </div>
+  </header>
+
+  <section id="view-dashboard" class="view-panel active">
+    <div class="grid-stats">
+      <div class="stat-card"><h3>Aulas Operativas</h3><div class="value" id="stat-salas">0</div></div>
+      <div class="stat-card"><h3>Aulas Libres Ahora</h3><div class="value" id="stat-libres">0</div></div>
+      <div class="stat-card"><h3>Materiales Prestados</h3><div class="value" id="stat-prestados">0</div></div>
+      <div class="stat-card"><h3>Averías Pendientes</h3><div class="value" id="stat-incidencias">0</div></div>
+    </div>
+    <h3 style="font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 15px;">Próximas Ocupaciones de Espacios</h3>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr><th>Espacio / Aula</th><th>Título Actividad</th><th>Profesorado</th><th>Inicio</th><th>Finalización</th></tr>
+        </thead>
+        <tbody id="table-proximos">
+          <tr><td colspan="5" style="text-align:center; color:var(--gray-3);">No hay reservas agendadas.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="view-reservas" class="view-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3 style="font-family: 'Playfair Display', serif; font-size: 1.3rem;">Historial de Ocupación Escolar</h3>
+      <button class="btn btn-primary" onclick="openModal('modalReserva')">+ Nueva Reserva de Aula</button>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead><tr><th>Aula</th><th>Profesor</th><th>Asunto</th><th>Tipo</th><th>Desde</th><th>Hasta</th></tr></thead>
+        <tbody id="table-reservas"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="view-materiales" class="view-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3 style="font-family: 'Playfair Display', serif; font-size: 1.3rem;">Inventario de Recursos Compartidos</h3>
+      <button class="btn btn-primary" onclick="openModal('modalPrestamo')">+ Registrar Salida Material</button>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead><tr><th>Artículo</th><th>Categoría</th><th>Disponibles / Totales</th><th>Descripción</th></tr></thead>
+        <tbody id="table-materiales"></tbody>
+      </table>
+    </div>
+    <h3 style="font-family: 'Playfair Display', serif; font-size: 1.3rem; margin: 30px 0 15px 0;">Historial de Asignaciones Pasadas</h3>
+    <div class="table-container">
+      <table>
+        <thead><tr><th>Material</th><th>Docente</th><th>Uds</th><th>Fecha Préstamo</th><th>Límite Entrega</th><th>Estado</th><th>Acción</th></tr></thead>
+        <tbody id="table-prestamos-historial"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="view-ordenadores" class="view-panel">
+    <div class="form-group" style="max-width: 300px; margin-bottom: 25px;">
+      <label>Seleccionar Aula de Informática</label>
+      <select id="select-sala-pc" class="form-control" onchange="loadPCOrdenadores()"></select>
+    </div>
+    <div style="text-align: center; margin-top: 10px;">
+      <div id="pcGridContainer" class="grid-pc-layout"></div>
+    </div>
+  </section>
+</main>
+
+<div id="modalReserva" class="modal-overlay">
+  <div class="modal-window">
+    <h3 style="margin-bottom: 15px;">Formulario de Ocupación</h3>
+    <form onsubmit="submitReserva(event)">
+      <div class="form-group"><label>Selecciona Aula</label><select id="resSala" class="form-control" required></select></div>
+      <div class="form-group"><label>Título o Curso</label><input type="text" id="resTitulo" class="form-control" placeholder="Ej: 4º de Primaria - Examen" required></div>
+      <div class="form-group"><label>Descripción</label><input type="text" id="resDesc" class="form-control"></div>
+      <div class="form-group">
+        <label>Tipo de Evento</label>
+        <select id="resTipo" class="form-control">
+          <option value="general">General / Clase ordinaria</option>
+          <option value="examen">Examen</option>
+          <option value="charla">Charla / Ponencia</option>
+          <option value="tutoria">Tutoría</option>
+          <option value="actividad">Actividad Extraescolar</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Fecha y Hora Inicio</label><input type="datetime-local" id="resInicio" class="form-control" required></div>
+      <div class="form-group"><label>Fecha y Hora Fin</label><input type="datetime-local" id="resFin" class="form-control" required></div>
+      <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn btn-gold" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Confirmar Registro</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="modalPrestamo" class="modal-overlay">
+  <div class="modal-window">
+    <h3 style="margin-bottom: 15px;">Solicitud de Entrega de Material</h3>
+    <form onsubmit="submitPrestamo(event)">
+      <div class="form-group"><label>Selecciona Recurso</label><select id="preMat" class="form-control" required></select></div>
+      <div class="form-group"><label>Unidades Requeridas</label><input type="number" id="preUds" class="form-control" min="1" value="1" required></div>
+      <div class="form-group"><label>Fecha Devolución Prevista</label><input type="datetime-local" id="preFin" class="form-control" required></div>
+      <div class="form-group"><label>Observaciones o Notas</label><input type="text" id="preNotas" class="form-control"></div>
+      <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn btn-gold" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Retirar Elementos</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="modalIncidencia" class="modal-overlay">
+  <div class="modal-window">
+    <h3 style="margin-bottom: 10px; color: var(--red);">Parte de Incidencia de Hardware</h3>
+    <p id="incidenciaPCLabel" style="font-weight: 600; margin-bottom: 15px;"></p>
+    <form onsubmit="submitIncidencia(event)">
+      <input type="hidden" id="incidenciaPCId">
+      <div class="form-group"><label>Descripción del Problema Técnico</label><textarea id="incidenciaDesc" class="form-control" rows="4" placeholder="Detalla el fallo (Ej: Pantalla rota, no arranca el sistema...)" required></textarea></div>
+      <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn btn-gold" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Enviar al Administrador</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// CONFIGURACIÓN: Enlace al servidor de producción exclusivo de Render
+const API = 'https://colegio-backend.onrender.com/api'; 
+
+let token = localStorage.getItem('token') || '';
+let currentUser = JSON.parse(localStorage.getItem('user')) || null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (token && currentUser) {
+    showApp();
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+});
+
+// CONTROL DE AUTENTICACIÓN
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const errBox = document.getElementById('loginError');
+  errBox.style.display = 'none';
+
+  try {
+    const r = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Fallo de acceso.');
+    
+    token = d.token;
+    currentUser = d.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(currentUser));
+    
+    showApp();
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.style.display = 'block';
+  }
+}
+
+function logout() {
+  localStorage.clear();
+  token = '';
+  currentUser = null;
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('userName').textContent = currentUser.nombre;
+  document.getElementById('userBadge').textContent = currentUser.rol.toUpperCase();
+  switchView('dashboard');
+}
+
+// ENRUTADOR VISTAS FRONTEND
+function switchView(viewName) {
+  document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.menu-nav li').forEach(l => l.classList.remove('active'));
+  
+  const targetPanel = document.getElementById(`view-${viewName}`);
+  if(targetPanel) targetPanel.classList.add('active');
+  
+  const titleMap = { dashboard: 'Resumen General', reservas: 'Reservar Aulas', materiales: 'Préstamos Material', ordenadores: 'Mapa de Ordenadores' };
+  document.getElementById('viewTitle').textContent = titleMap[viewName] || 'Gestión';
+
+  if (viewName === 'dashboard') loadDashboard();
+  if (viewName === 'reservas') loadReservas();
+  if (viewName === 'materiales') loadMaterialesYPrestamos();
+  if (viewName === 'ordenadores') loadSalasParaPC();
+}
+
+// SOLICITUDES DE RED CON CABECERAS DE SEGURIDAD
+async function req(endpoint, method = 'GET', body = null) {
+  const options = { method, headers: { 'Authorization': `Bearer ${token}` } };
+  if (body) {
+    options.headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(body);
+  }
+  const r = await fetch(`${API}/${endpoint}`, options);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Error de red.');
+  return d;
+}
+
+// CARGA DE CONTENIDOS DINÁMICOS
+async function loadDashboard() {
+  try {
+    const d = await req('dashboard');
+    document.getElementById('stat-salas').textContent = d.totalSalas;
+    document.getElementById('stat-libres').textContent = d.salasLibres;
+    document.getElementById('stat-prestados').textContent = d.prestamosActivos;
+    document.getElementById('stat-incidencias').textContent = d.incidenciasAbiertas;
+
+    const tbody = document.getElementById('table-proximos');
+    tbody.innerHTML = d.proximosEventos.length === 0 
+      ? `<tr><td colspan="5" style="text-align:center; color:var(--gray-3);">No hay ocupaciones programadas hoy.</td></tr>`
+      : d.proximosEventos.map(e => `
+          <tr>
+            <td><strong>${e.sala}</strong></td>
+            <td>${e.titulo} <span class="badge ${tipoBadge(e.tipo)}">${e.tipo}</span></td>
+            <td>${e.profesor}</td>
+            <td>${fmtDT(e.inicio)}</td>
+            <td>${fmtDT(e.fin)}</td>
+          </tr>
+        `).join('');
+  } catch (err) { console.error(err); }
+}
+
+async function loadReservas() {
+  try {
+    const list = await req('eventos');
+    document.getElementById('table-reservas').innerHTML = list.map(e => `
+      <tr>
+        <td><strong>${e.sala_nombre}</strong></td>
+        <td>${e.profesor_nombre}</td>
+        <td>${e.titulo}</td>
+        <td><span class="badge ${tipoBadge(e.tipo)}">${e.tipo.toUpperCase()}</span></td>
+        <td>${fmtDT(e.inicio)}</td>
+        <td>${fmtDT(e.fin)}</td>
+      </tr>
+    `).join('');
+    
+    // Rellenar selector de aulas del modal
+    const salas = await req('salas');
+    document.getElementById('resSala').innerHTML = salas.map(s => `<option value="${s.id}">${s.nombre} (${s.codigo})</option>`).join('');
+  } catch (err) { console.error(err); }
+}
+
+async function submitReserva(e) {
+  e.preventDefault();
+  const body = {
+    sala_id: document.getElementById('resSala').value,
+    titulo: document.getElementById('resTitulo').value,
+    descripcion: document.getElementById('resDesc').value,
+    tipo: document.getElementById('resTipo').value,
+    inicio: document.getElementById('resInicio').value,
+    fin: document.getElementById('resFin').value
+  };
+  try {
+    await req('eventos', 'POST', body);
+    closeModal();
+    loadReservas();
+  } catch(err) { alert(err.message); }
+}
+
+async function loadMaterialesYPrestamos() {
+  try {
+    const mats = await req('materiales');
+    document.getElementById('table-materiales').innerHTML = mats.map(m => `
+      <tr>
+        <td><strong>${m.nombre}</strong></td>
+        <td><span class="badge badge-gray">${m.categoria.toUpperCase()}</span></td>
+        <td>${m.disponibles} / ${m.total_uds} uds disponibles</td>
+        <td style="color:var(--text-muted); font-size:0.9rem;">${m.descripcion || '—'}</td>
+      </tr>
+    `).join('');
+    document.getElementById('preMat').innerHTML = mats.map(m => `<option value="${m.id}">${m.nombre} (Dispo: ${m.disponibles})</option>`).join('');
+
+    const prestamos = await req('prestamos');
+    document.getElementById('table-prestamos-historial').innerHTML = prestamos.map(p => {
+      const esAdmin = currentUser.rol === 'admin';
+      const botonDevolver = (p.estado === 'prestado' && (esAdmin || p.profesor_id === currentUser.id))
+        ? `<button class="btn btn-gold" style="padding:4px 8px; font-size:0.8rem;" onclick="devolverMaterial(${p.id})">Devolver</button>`
+        : '—';
+      return `
+        <tr>
+          <td><strong>${p.material_nombre}</strong></td>
+          <td>${p.profesor_nombre}</td>
+          <td>${p.uds}</td>
+          <td>${fmtDT(p.inicio)}</td>
+          <td>${fmtDT(p.fin_previsto)}</td>
+          <td><span class="badge ${p.estado==='prestado'?'badge-amber':'badge-green'}">${p.estado.toUpperCase()}</span></td>
+          <td>${botonDevolver}</td>
+        </tr>
+      `;
+    }).join('');
+  } catch(err) { console.error(err); }
+}
+
+async function submitPrestamo(e) {
+  e.preventDefault();
+  const body = {
+    material_id: document.getElementById('preMat').value,
+    uds: parseInt(document.getElementById('preUds').value),
+    fin_previsto: document.getElementById('preFin').value,
+    notas: document.getElementById('preNotas').value
+  };
+  try {
+    await req('prestamos', 'POST', body);
+    closeModal();
+    loadMaterialesYPrestamos();
+  } catch(err) { alert(err.message); }
+}
+
+async function devolverMaterial(id) {
+  if(!confirm('¿Confirmas el retorno físico de este recurso al almacén del colegio?')) return;
+  try {
+    await req(`prestamos/${id}/devolver`, 'POST');
+    loadMaterialesYPrestamos();
+  } catch(err) { alert(err.message); }
+}
+
+async function loadSalasParaPC() {
+  try {
+    const salas = await req('salas');
+    const select = document.getElementById('select-sala-pc');
+    select.innerHTML = salas.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+    if(salas.length > 0) loadPCOrdenadores();
+  } catch(err) { console.error(err); }
+}
+
+async function loadPCOrdenadores() {
+  const salaId = document.getElementById('select-sala-pc').value;
+  if(!salaId) return;
+  try {
+    const ordenadores = await req(`ordenadores/sala/${salaId}`);
+    const container = document.getElementById('pcGridContainer');
+    if(ordenadores.length === 0) {
+      container.innerHTML = `<p style="color:var(--gray-3); padding:10px;">Esta sala no cuenta con un mapa informático configurado.</p>`;
+      return;
+    }
+    
+    let maxFila = Math.max(...ordenadores.map(o => o.fila));
+    let maxCol = Math.max(...ordenadores.map(o => o.columna));
+    
+    container.style.gridTemplateRows = `repeat(${maxFila}, 1fr)`;
+    container.style.gridTemplateColumns = `repeat(${maxCol}, 1fr)`;
+    
+    container.innerHTML = ordenadores.map(o => `
+      <div class="pc-node pc-${o.estado}" style="grid-row: ${o.fila}; grid-column: ${o.columna};" onclick="clickPC(${o.id}, '${o.etiqueta}', '${o.estado}')">
+        <span>🖥️</span>
+        <span style="margin-top:2px;">${o.etiqueta}</span>
+      </div>
+    `).join('');
+  } catch(err) { console.error(err); }
+}
+
+function clickPC(id, etiqueta, estado) {
+  if(estado === 'ko') {
+    alert(`El equipo ${etiqueta} está marcado fuera de servicio debido a una avería registrada.`);
+    return;
+  }
+  document.getElementById('incidenciasDesc').value = '';
+  document.getElementById('incidenciaPCId').value = id;
+  document.getElementById('incidenciaPCLabel').textContent = `Reportar fallo en Terminal: ${etiqueta}`;
+  openModal('modalIncidencia');
+}
+
+async function submitIncidencia(e) {
+  e.preventDefault();
+  const body = {
+    ordenador_id: document.getElementById('incidenciaPCId').value,
+    descripcion: document.getElementById('incidenciaDesc').value
+  };
+  try {
+    await req('incidencias', 'POST', body);
+    closeModal();
+    loadPCOrdenadores();
+  } catch(err) { alert(err.message); }
+}
+
+// INTERFAZ DE DIÁLOGOS MODALES
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
+
+// UTILIDADES FORMATO
+function fmtDT(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function tipoBadge(t) {
+  return {examen:'badge-red',charla:'badge-blue',tutoria:'badge-amber',actividad:'badge-green',general:'badge-gray'}[t]||'badge-gray';
+}
+</script>
+</body>
+</html>
