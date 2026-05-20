@@ -29,18 +29,28 @@ app.post('/api/auth/login', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
   
   try {
-    // Permite login por correo o directamente escribiendo 'rberben' en la caja de texto
+    const loginLimpio = email.trim().toLowerCase();
+    console.log(`[LOGIN TRY] Buscando usuario con: "${loginLimpio}"`);
+
+    // Consulta ultra-flexible: limpia espacios y convierte a minúsculas tanto columna como parámetro
     const [user] = await q(
-      'SELECT * FROM usuarios WHERE (LOWER(TRIM(email)) = LOWER(TRIM($1)) OR username = $1) AND activo=TRUE', 
-      [email]
+      'SELECT * FROM usuarios WHERE (LOWER(TRIM(email)) = $1 OR LOWER(TRIM(username)) = $1) AND activo=TRUE', 
+      [loginLimpio]
     );
     
-    if (!user) return res.status(401).json({ error: 'Credenciales inválidas.' });
+    if (!user) {
+      console.log(`[LOGIN FAIL] No se encontró ningún usuario activo que coincida con: "${loginLimpio}"`);
+      return res.status(401).json({ error: 'Credenciales inválidas.' });
+    }
     
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Credenciales inválidas.' });
+    if (!valid) {
+      console.log(`[LOGIN FAIL] Usuario encontrado ("${user.username}"), pero la contraseña no coincide.`);
+      return res.status(401).json({ error: 'Credenciales inválidas.' });
+    }
 
-    // Payload limpio de token de sesión sin metadatos multicentro
+    console.log(`[LOGIN SUCCESS] Sesión iniciada con éxito para: ${user.username}`);
+
     const token = jwt.sign(
       { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, username: user.username },
       process.env.JWT_SECRET,
@@ -52,7 +62,7 @@ app.post('/api/auth/login', async (req, res) => {
       user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, username: user.username } 
     });
   } catch (err) {
-    console.error('Error crítico login:', err);
+    console.error('Error crítico en login:', err);
     res.status(500).json({ error: 'Error interno en el servidor de control.' });
   }
 });
