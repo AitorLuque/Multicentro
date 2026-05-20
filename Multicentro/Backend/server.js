@@ -7,12 +7,11 @@ const jwt      = require('jsonwebtoken');
 const { auth, role } = require('./middleware/auth');
 
 const app  = express();
+const isProduction = process.env.NODE_ENV === 'production';
+
 const pool = new Pool({
-  host:     process.env.DB_HOST     || 'localhost',
-  port:     process.env.DB_PORT     || 5432,
-  database: process.env.DB_NAME     || 'multicentro',
-  user:     process.env.DB_USER     || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  connectionString: process.env.DATABASE_URL,
+  ssl: isProduction ? { rejectUnauthorized: false } : false
 });
 
 app.use(cors());
