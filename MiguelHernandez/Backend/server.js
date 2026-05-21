@@ -378,5 +378,51 @@ app.post('/api/incidencias', auth, async (req, res) => {
   } catch (err) { await q('ROLLBACK'); res.status(500).json({ error: 'Error.' }); }
 });
 
+app.get('/api/incidencias/ordenador/:id', auth, async (req, res) => {
+  try {
+    const rows = await q(
+      `SELECT i.id, i.descripcion, i.resuelta, i.fecha_resolucion, i.comentario_resolucion, i.created_at,
+              u.nombre AS profesor_nombre
+       FROM incidencias_equipo i
+       JOIN usuarios u ON u.id = i.profesor_id
+       WHERE i.ordenador_id = $1
+       ORDER BY i.resuelta ASC, i.created_at DESC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al cargar incidencias.' });
+  }
+});
+
+app.post('/api/incidencias/:id/resolver', auth, role('admin'), async (req, res) => {
+  const { comentario, reabrir_ordenador } = req.body;
+  try {
+    const [inc] = await q('SELECT * FROM incidencias_equipo WHERE id=$1', [req.params.id]);
+    if (!inc) return res.status(404).json({ error: 'Incidencia no encontrada.' });
+    if (inc.resuelta) return res.status(400).json({ error: 'La incidencia ya estaba marcada como resuelta.' });
+    await q('BEGIN');
+    await q(
+      `UPDATE incidencias_equipo SET resuelta=TRUE, fecha_resolucion=NOW(), comentario_resolucion=$1 WHERE id=$2`,
+      [comentario || null, req.params.id]
+    );
+    if (reabrir_ordenador) {
+      // Si no quedan incidencias abiertas para ese PC, volvemos a estado OK
+      const pendientes = await q(
+        'SELECT COUNT(*) FROM incidencias_equipo WHERE ordenador_id=$1 AND resuelta=FALSE',
+        [inc.ordenador_id]
+      );
+      if (parseInt(pendientes[0].count) === 0) {
+        await q("UPDATE ordenadores SET estado='ok' WHERE id=$1", [inc.ordenador_id]);
+      }
+    }
+    await q('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await q('ROLLBACK');
+    res.status(400).json({ error: 'No se pudo resolver la incidencia.' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));

@@ -91,6 +91,15 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 .btn-ghost-danger:hover { background: var(--red); color: var(--white); }
 .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
 
+/* Lista de incidencias del PC */
+.incidencias-box { margin-top: 15px; border-top: 1px dashed var(--gray-3); padding-top: 12px; }
+.incidencias-box h4 { margin-bottom: 8px; color: var(--navy); font-size: 0.95rem; }
+.incidencia-item { background: var(--red-lt); border-left: 3px solid var(--red); padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; font-size: 0.85rem; }
+.incidencia-item.resuelta { background: var(--green-lt); border-left-color: var(--green); opacity: 0.85; }
+.incidencia-item .meta { color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.incidencia-item .desc { color: var(--text); white-space: pre-wrap; }
+.incidencia-item .resol { margin-top: 6px; font-style: italic; color: var(--green); font-size: 0.78rem; }
+
 /* Distribución de Equipos Informáticos */
 .grid-pc-layout { display: inline-grid; gap: 10px; background: var(--white); padding: 20px; border-radius: 8px; border: 1px solid var(--gray-2); max-width: 100%; overflow-x: auto; }
 .pc-node { width: 65px; height: 65px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s; }
@@ -321,9 +330,14 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
   <h3 id="pcModalActionTitle" style="color:var(--navy);">Operaciones sobre Equipo</h3><br>
   <p id="incidenciaPCLabel" style="font-weight:600;"></p><br>
   
-  <form id="form-incidencia-basica" onsubmit="submitIncidencia(event)">
+  <div id="incidenciasBox" class="incidencias-box" style="display:none;">
+    <h4>🛠️ Historial de Incidencias del Equipo</h4>
+    <div id="incidenciasLista"></div>
+  </div>
+
+  <form id="form-incidencia-basica" onsubmit="submitIncidencia(event)" style="margin-top:15px;">
     <input type="hidden" id="incidenciaPCId">
-    <div class="form-group"><label>Reportar Parte de Avería Física (Docentes)</label><textarea id="incidenciaDesc" class="form-control" rows="2" placeholder="Describa el fallo técnico observado..."></textarea></div>
+    <div class="form-group"><label>Reportar Nuevo Parte de Avería (Docentes)</label><textarea id="incidenciaDesc" class="form-control" rows="2" placeholder="Describa el fallo técnico observado..."></textarea></div>
     <button type="submit" class="btn btn-danger" style="width:100%; justify-content:center;">Enviar Parte Técnico</button>
   </form>
   
@@ -743,17 +757,22 @@ async function loadPCOrdenadores() {
   } catch(e) { console.error(e); }
 }
 
-function clickPC(id) {
+async function clickPC(id) {
   const target = currentCacheOrdenadores.find(o => o.id === id);
   if(!target) return;
 
   document.getElementById('incidenciaPCId').value = target.id;
-  document.getElementById('incidenciaPCLabel').innerHTML = `Equipo: <strong>${target.etiqueta}</strong><br><small style="color:var(--text-muted);">${target.cpu || 'i5'} | ${target.ram || '8GB'} RAM | ${target.sistema_operativo || 'Ubuntu'}</small>`;
+  const badgeEstado = target.estado === 'ok'
+    ? '<span class="badge badge-green">OPERATIVO</span>'
+    : target.estado === 'ko'
+      ? '<span class="badge badge-red">FUERA DE SERVICIO</span>'
+      : '<span class="badge badge-gray">EN REPARACIÓN</span>';
+  document.getElementById('incidenciaPCLabel').innerHTML = `Equipo: <strong>${target.etiqueta}</strong> ${badgeEstado}<br><small style="color:var(--text-muted);">${target.cpu || 'i5'} | ${target.ram || '8GB'} RAM | ${target.sistema_operativo || 'Ubuntu'}</small>`;
   document.getElementById('incidenciaDesc').value = '';
 
   const isAdmin = currentUser.rol === 'admin';
   const adminZone = document.getElementById('admin-pc-edit-zone');
-  
+
   if (isAdmin) {
     adminZone.style.display = 'block';
     document.getElementById('pcModalActionTitle').textContent = 'Configurar Ficha e Incidencias del Equipo';
@@ -767,9 +786,61 @@ function clickPC(id) {
     document.getElementById('editPCFormEstado').value = target.estado;
   } else {
     adminZone.style.display = 'none';
-    document.getElementById('pcModalActionTitle').textContent = 'Reportar Parte de Avería';
+    document.getElementById('pcModalActionTitle').textContent = 'Información y Parte de Avería';
   }
+
+  // Cargar incidencias del PC
+  await loadIncidenciasPC(target.id);
+
   openModal('modalIncidencia');
+}
+
+async function loadIncidenciasPC(pcId) {
+  const box = document.getElementById('incidenciasBox');
+  const lista = document.getElementById('incidenciasLista');
+  lista.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Cargando incidencias...</p>';
+  box.style.display = 'block';
+  try {
+    const items = await req(`incidencias/ordenador/${pcId}`);
+    if (items.length === 0) {
+      lista.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Este equipo no tiene partes de avería registrados.</p>';
+      return;
+    }
+    const isAdmin = currentUser.rol === 'admin';
+    lista.innerHTML = items.map(i => {
+      const resolBlock = i.resuelta
+        ? `<div class="resol">✅ Resuelta ${fmtDT(i.fecha_resolucion)}${i.comentario_resolucion ? ' — ' + escapeHtml(i.comentario_resolucion) : ''}</div>`
+        : (isAdmin
+            ? `<div style="margin-top:6px;"><button class="btn btn-ghost btn-sm" onclick="resolverIncidencia(${i.id}, ${pcId})">Marcar como resuelta</button></div>`
+            : '');
+      return `
+        <div class="incidencia-item ${i.resuelta ? 'resuelta' : ''}">
+          <div class="desc">${escapeHtml(i.descripcion || '(sin descripción)')}</div>
+          <div class="meta">
+            <span>👤 ${escapeHtml(i.profesor_nombre)}</span>
+            <span>📅 ${fmtDT(i.created_at)}</span>
+          </div>
+          ${resolBlock}
+        </div>`;
+    }).join('');
+  } catch (e) {
+    lista.innerHTML = `<p style="color:var(--red); font-size:0.85rem;">No se pudieron cargar las incidencias: ${e.message}</p>`;
+  }
+}
+
+async function resolverIncidencia(incidenciaId, pcId) {
+  const comentario = prompt('Comentario de resolución (opcional):', '') ?? '';
+  const reabrir = confirm('¿Devolver el ordenador a estado "OK" si no quedan más incidencias abiertas?');
+  try {
+    await req(`incidencias/${incidenciaId}/resolver`, 'POST', { comentario, reabrir_ordenador: reabrir });
+    await loadIncidenciasPC(pcId);
+    // Refrescar el mapa de PCs para que el color del equipo cambie si volvió a OK
+    loadPCOrdenadores();
+  } catch (e) { alert(e.message); }
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 function openCrearPCModal() {
