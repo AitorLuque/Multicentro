@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CEIP Miguel Hernández — Panel de Gestión</title>
+<title>CEIP Miguel Hernández — Sistema de Gestión</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -29,36 +29,52 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Source Sans 3', sans-serif; background: var(--cream); color: var(--text); display: flex; min-height: 100vh; flex-direction: row; }
 
-/* --- DISEÑO RESPONSIVE AUTOMÁTICO --- */
+/* ============================================================
+   DISEÑO RESPONSIVO FLUIDO (MÓVIL & TABLET)
+   ============================================================ */
 @media (max-width: 768px) {
   body { flex-direction: column; }
-  .sidebar { width: 100% !important; height: auto !important; }
-  .menu-nav { display: flex; flex-wrap: wrap; padding: 10px !important; }
-  .menu-nav li { padding: 8px 12px !important; font-size: 0.9rem; }
-  .grid-stats { grid-template-columns: 1fr !important; }
-  .view-panel { padding: 15px !important; }
-  .top-bar { padding: 0 15px !important; }
+  .sidebar { width: 100% !important; height: auto !important; border-right: none !important; border-bottom: 1px solid var(--navy-mid); }
+  .brand-header { padding: 15px !important; }
+  .menu-nav { display: flex !important; flex-direction: row !important; flex-wrap: wrap; padding: 5px !important; }
+  .menu-nav li { padding: 10px 14px !important; font-size: 0.9rem; border-left: none !important; border-bottom: 2px solid transparent; }
+  .menu-nav li:hover, .menu-nav li.active { border-left: none !important; border-bottom: 2px solid var(--gold); padding-left: 14px !important; }
+  .view-panel { padding: 20px 15px !important; }
+  .grid-stats { grid-template-columns: 1fr !important; gap: 15px; }
+  .top-bar { padding: 0 15px !important; height: 60px; }
 }
 
-/* Login */
+/* Acceso / Login */
 .login-screen { position: fixed; inset: 0; background: var(--navy); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
 .login-card { background: var(--white); padding: 40px; border-radius: 8px; width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border-top: 5px solid var(--gold); }
 .login-logo-container { text-align: center; margin-bottom: 25px; }
 .login-logo-container img { width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--gold); object-fit: cover; margin-bottom: 10px; }
 
-/* Layout general */
+/* Estructura Main */
 .sidebar { width: 280px; background: var(--navy); color: var(--white); display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid var(--navy-mid); }
 .main-content { flex: 1; display: flex; flex-direction: column; overflow-x: hidden; }
 .top-bar { height: 70px; background: var(--white); border-bottom: 1px solid var(--gray-2); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; gap: 10px; }
 
 .brand-header { display: flex; align-items: center; gap: 14px; padding: 22px 18px; background-color: var(--navy); border-bottom: 1px solid var(--navy-mid); }
-.menu-nav { list-style: none; padding: 20px 0; flex: 1; }
+.menu-nav { list-style: none; padding: 20px 0; flex: 1; display: flex; flex-direction: column; }
 .menu-nav li { padding: 12px 25px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--gray-2); font-weight: 500; transition: all 0.2s; }
 .menu-nav li:hover, .menu-nav li.active { background: var(--navy-mid); color: var(--gold); border-left: 4px solid var(--gold); padding-left: 21px; }
+
 .view-panel { padding: 40px; display: none; }
 .view-panel.active { display: block; }
 
-/* Formularios y Botones */
+/* Componentes de UI */
+.grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+.stat-card { background: var(--white); padding: 20px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--gold); }
+.stat-card h3 { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+.stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--navy); margin-top: 5px; }
+
+.table-container { background: var(--white); border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); overflow-x: auto; margin-top: 15px; width: 100%; }
+table { width: 100%; border-collapse: collapse; text-align: left; min-width: 600px; }
+th, td { padding: 12px 18px; border-bottom: 1px solid var(--gray-1); font-size: 0.95rem; }
+th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
+
+/* Formularios & Botones */
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: var(--gray-4); font-size: 0.9rem; }
 .form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--gray-2); border-radius: 4px; font-family: inherit; font-size: 0.95rem; }
@@ -70,31 +86,22 @@ body { font-family: 'Source Sans 3', sans-serif; background: var(--cream); color
 .btn-gold:hover { background: var(--gold-lt); }
 .btn-danger { background: var(--red); color: var(--white); }
 
-/* Estadísticas adaptables */
-.grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-.stat-card { background: var(--white); padding: 20px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--gold); }
-.stat-card h3 { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
-.stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--navy); margin-top: 5px; }
-
-/* Tablas Responsivas */
-.table-container { background: var(--white); border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); overflow-x: auto; margin-top: 15px; width: 100%; }
-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 600px; }
-th, td { padding: 12px 18px; border-bottom: 1px solid var(--gray-1); font-size: 0.95rem; }
-th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
-
-/* Red informática de PCs */
+/* Distribución de Equipos Informáticos */
 .grid-pc-layout { display: inline-grid; gap: 10px; background: var(--white); padding: 20px; border-radius: 8px; border: 1px solid var(--gray-2); max-width: 100%; overflow-x: auto; }
-.pc-node { width: 60px; height: 60px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 600; cursor: pointer; border: 2px solid transparent; }
+.pc-node { width: 65px; height: 65px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s; }
+.pc-node:hover { transform: scale(1.05); }
 .pc-ok { background: var(--green-lt); color: var(--green); border-color: #c2e7d3; }
 .pc-ko { background: var(--red-lt); color: var(--red); border-color: #f5c6c6; }
 .pc-reparacion { background: #fef3d6; color: var(--gold); border-color: #fbe3a5; }
 
+/* Badges */
 .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
 .badge-red { background: var(--red-lt); color: var(--red); }
 .badge-blue { background: #e8f0fe; color: #1a73e8; }
 .badge-green { background: var(--green-lt); color: var(--green); }
 .badge-gray { background: var(--gray-1); color: var(--gray-4); }
 
+/* Modales */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
 .modal-overlay.active { display: flex; }
 .modal-window { background: var(--white); padding: 25px; border-radius: 6px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -112,14 +119,14 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
     <div id="loginError" style="color: var(--red); background: var(--red-lt); padding: 10px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 15px; display: none;"></div>
     <form onsubmit="handleLogin(event)">
       <div class="form-group">
-        <label>Usuario o Email</label>
-        <input type="text" id="loginEmail" class="form-control" required placeholder="rberben">
+        <label>Usuario o Correo Electrónico</label>
+        <input type="text" id="loginEmail" class="form-control" required placeholder="ej: rberben">
       </div>
       <div class="form-group" style="margin-bottom: 20px;">
         <label>Contraseña</label>
         <input type="password" id="loginPassword" class="form-control" required placeholder="••••••••">
       </div>
-      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Acceder al Sistema</button>
+      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Ingresar al Sistema</button>
     </form>
   </div>
 </div>
@@ -129,15 +136,15 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
     <img src="MIGUEL_HERNANDEZ_LOGO.jpg" alt="Logo" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover;">
     <div>
       <h1 style="font-family: 'Playfair Display', serif; color: var(--white); font-size: 1.1rem; line-height: 1.2;">CEIP Miguel Hernández</h1>
-      <span style="color: var(--gold); font-size: 0.7rem; font-weight: 600; text-transform: uppercase;">Consola Escolar</span>
+      <span style="color: var(--gold); font-size: 0.7rem; font-weight: 600; text-transform: uppercase;">Consola de Control</span>
     </div>
   </div>
   <ul class="menu-nav">
-    <li id="nav-dashboard" class="active" onclick="switchView('dashboard')">📊 Resumen</li>
-    <li id="nav-reservas" onclick="switchView('reservas')">🏫 Aulas</li>
-    <li id="nav-materiales" onclick="switchView('materiales')">📦 Materiales</li>
-    <li id="nav-ordenadores" onclick="switchView('ordenadores')">💻 Mapas PC</li>
-    <li id="nav-usuarios" onclick="switchView('usuarios')" style="display:none;">👥 Profesores</li>
+    <li id="nav-dashboard" class="active" onclick="switchView('dashboard')">📊 Resumen General</li>
+    <li id="nav-reservas" onclick="switchView('reservas')">🏫 Reservar Aulas</li>
+    <li id="nav-materiales" onclick="switchView('materiales')">📦 Inventario Materiales</li>
+    <li id="nav-ordenadores" onclick="switchView('ordenadores')">💻 Aulas Informáticas</li>
+    <li id="nav-usuarios" onclick="switchView('usuarios')" style="display:none;">👥 Gestión Claustro</li>
   </ul>
   <div style="padding: 15px; border-top: 1px solid var(--navy-mid);">
     <button class="btn btn-gold" onclick="logout()" style="width: 100%; justify-content: center; font-size: 0.8rem;">Cerrar Sesión</button>
@@ -146,24 +153,24 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 
 <main class="main-content">
   <header class="top-bar">
-    <h2 id="viewTitle" style="font-family: 'Playfair Display', serif; font-size: 1.35rem; color: var(--navy);">Resumen</h2>
+    <h2 id="viewTitle" style="font-family: 'Playfair Display', serif; font-size: 1.35rem; color: var(--navy);">Resumen General</h2>
     <div style="display: flex; align-items: center; gap: 8px;">
-      <span id="userBadge" class="badge badge-blue">Profesor</span>
+      <span id="userBadge" class="badge badge-blue">Docente</span>
       <strong id="userName" style="color: var(--navy); font-size: 0.9rem;">—</strong>
     </div>
   </header>
 
   <section id="view-dashboard" class="view-panel active">
     <div class="grid-stats">
-      <div class="stat-card"><h3>Aulas</h3><div class="value" id="stat-salas">0</div></div>
+      <div class="stat-card"><h3>Aulas Activas</h3><div class="value" id="stat-salas">0</div></div>
       <div class="stat-card"><h3>Libres Ahora</h3><div class="value" id="stat-libres">0</div></div>
-      <div class="stat-card"><h3>Préstamos</h3><div class="value" id="stat-prestados">0</div></div>
-      <div class="stat-card"><h3>Averías</h3><div class="value" id="stat-incidencias">0</div></div>
+      <div class="stat-card"><h3>Préstamos Activos</h3><div class="value" id="stat-prestados">0</div></div>
+      <div class="stat-card"><h3>Averías Técnicas</h3><div class="value" id="stat-incidencias">0</div></div>
     </div>
-    <h3 style="font-family: 'Playfair Display', serif; font-size: 1.2rem; margin-bottom: 10px;">Ocupación Próxima</h3>
+    <h3 style="font-family: 'Playfair Display', serif; font-size: 1.2rem; margin-bottom: 10px;">Próximas Ocupaciones de Espacios</h3>
     <div class="table-container">
       <table>
-        <thead><tr><th>Espacio</th><th>Actividad</th><th>Profesorado</th><th>Inicio</th><th>Fin</th></tr></thead>
+        <thead><tr><th>Espacio / Aula</th><th>Actividad Docente</th><th>Profesorado</th><th>Inicio</th><th>Fin</th></tr></thead>
         <tbody id="table-proximos"></tbody>
       </table>
     </div>
@@ -171,12 +178,12 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 
   <section id="view-reservas" class="view-panel">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-      <h3>Calendario de Ocupación</h3>
-      <button class="btn btn-primary" onclick="openModal('modalReserva')">+ Añadir Reserva</button>
+      <h3>Cuadrante General de Ocupación</h3>
+      <button class="btn btn-primary" onclick="openModal('modalReserva')">+ Agendar Nueva Reserva</button>
     </div>
     <div class="table-container">
       <table>
-        <thead><tr><th>Aula</th><th>Docente</th><th>Asunto</th><th>Tipo</th><th>Inicio</th><th>Fin</th></tr></thead>
+        <thead><tr><th>Espacio / Aula</th><th>Docente</th><th>Asunto / Módulo</th><th>Tipo</th><th>Horario de Inicio</th><th>Horario de Fin</th></tr></thead>
         <tbody id="table-reservas"></tbody>
       </table>
     </div>
@@ -184,19 +191,19 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 
   <section id="view-materiales" class="view-panel">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-      <h3>Inventario del Colegio</h3>
-      <button class="btn btn-primary" onclick="openModal('modalPrestamo')">+ Registrar Préstamo</button>
+      <h3>Inventario de Recursos Móviles</h3>
+      <button class="btn btn-primary" onclick="openModal('modalPrestamo')">+ Registrar Salida / Préstamo</button>
     </div>
     <div class="table-container">
       <table>
-        <thead><tr><th>Nombre</th><th>Categoría</th><th>Disponibilidad</th><th>Descripción</th></tr></thead>
+        <thead><tr><th>Nombre del Recurso</th><th>Categoría</th><th>Disponibilidad en Almacén</th><th>Características</th></tr></thead>
         <tbody id="table-materiales"></tbody>
       </table>
     </div>
-    <h3 style="margin-top: 25px;">Asignaciones Activas</h3>
+    <h3 style="margin-top: 25px;">Asignaciones y Préstamos Activos</h3>
     <div class="table-container">
       <table>
-        <thead><tr><th>Material</th><th>Profesor</th><th>Cant.</th><th>Inicio</th><th>Límite</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Material Entregado</th><th>Profesor Asignado</th><th>Cant.</th><th>Fecha Salida</th><th>Límite Entrega</th><th>Estado</th><th>Operaciones</th></tr></thead>
         <tbody id="table-prestamos-historial"></tbody>
       </table>
     </div>
@@ -214,12 +221,12 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 
   <section id="view-usuarios" class="view-panel">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h3>Claustro de Profesores</h3>
-      <button class="btn btn-primary" onclick="openCrearUsuarioModal()">+ Nuevo Profesor</button>
+      <h3>Claustro Escolar Registrado</h3>
+      <button class="btn btn-primary" onclick="openCrearUsuarioModal()">+ Dar de Alta Profesor</button>
     </div>
     <div class="table-container">
       <table>
-        <thead><tr><th>Usuario</th><th>Nombre completo</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Nombre de Usuario</th><th>Nombre Completo</th><th>Email Corporativo</th><th>Rol</th><th>Estado Cuenta</th><th>Operaciones</th></tr></thead>
         <tbody id="table-usuarios"></tbody>
       </table>
     </div>
@@ -229,36 +236,36 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 <div id="modalReserva" class="modal-overlay"><div class="modal-window">
   <h3>Nueva Reserva de Espacio</h3><br>
   <form onsubmit="submitReserva(event)">
-    <div class="form-group"><label>Aula</label><select id="resSala" class="form-control" required></select></div>
-    <div class="form-group"><label>Asunto</label><input type="text" id="resTitulo" class="form-control" required placeholder="Clase de Geografía"></div>
-    <div class="form-group"><label>Notas</label><input type="text" id="resDesc" class="form-control"></div>
-    <div class="form-group"><label>Tipo</label><select id="resTipo" class="form-control"><option value="general">General</option><option value="examen">Examen</option><option value="charla">Charla</option></select></div>
-    <div class="form-group"><label>Inicio</label><input type="datetime-local" id="resInicio" class="form-control" required></div>
-    <div class="form-group"><label>Fin</label><input type="datetime-local" id="resFin" class="form-control" required></div>
-    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Guardar Ocupación</button><br><br>
+    <div class="form-group"><label>Selecciona el Aula</label><select id="resSala" class="form-control" required></select></div>
+    <div class="form-group"><label>Asunto / Actividad</label><input type="text" id="resTitulo" class="form-control" required placeholder="Ej: Clase de Informática Avanzada"></div>
+    <div class="form-group"><label>Notas adicionales</label><input type="text" id="resDesc" class="form-control" placeholder="Opcional"></div>
+    <div class="form-group"><label>Tipo de Evento</label><select id="resTipo" class="form-control"><option value="general">Clase General</option><option value="examen">Sesión de Examen</option><option value="charla">Charla / Evento</option></select></div>
+    <div class="form-group"><label>Fecha e Hora de Inicio</label><input type="datetime-local" id="resInicio" class="form-control" required></div>
+    <div class="form-group"><label>Fecha e Hora de Fin</label><input type="datetime-local" id="resFin" class="form-control" required></div>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Confirmar y Bloquear Horario</button><br><br>
     <button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cancelar</button>
   </form>
 </div></div>
 
 <div id="modalPrestamo" class="modal-overlay"><div class="modal-window">
-  <h3>Asignación de Material Móvil</h3><br>
+  <h3>Asignación de Recurso</h3><br>
   <form onsubmit="submitPrestamo(event)">
-    <div class="form-group"><label>Recurso</label><select id="preMat" class="form-control" required></select></div>
-    <div class="form-group"><label>Unidades</label><input type="number" id="preUds" class="form-control" min="1" value="1" required></div>
-    <div class="form-group"><label>Límite de Entrega</label><input type="datetime-local" id="preFin" class="form-control" required></div>
-    <div class="form-group"><label>Notas</label><input type="text" id="preNotas" class="form-control"></div>
-    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Confirmar Préstamo</button><br><br>
+    <div class="form-group"><label>Material Solicitado</label><select id="preMat" class="form-control" required></select></div>
+    <div class="form-group"><label>Unidades Solicitadas</label><input type="number" id="preUds" class="form-control" min="1" value="1" required></div>
+    <div class="form-group"><label>Fecha Límite de Devolución</label><input type="datetime-local" id="preFin" class="form-control" required></div>
+    <div class="form-group"><label>Anotaciones de Entrega</label><input type="text" id="preNotas" class="form-control" placeholder="Ej: Entregado con funda y cargador"></div>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Aprobar Préstamo</button><br><br>
     <button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cancelar</button>
   </form>
 </div></div>
 
 <div id="modalIncidencia" class="modal-overlay"><div class="modal-window">
-  <h3 style="color:var(--red);">Reportar Avería Física</h3><br>
+  <h3 style="color:var(--red);">Reportar Parte de Avería Física</h3><br>
   <p id="incidenciaPCLabel" style="font-weight:600;"></p><br>
   <form onsubmit="submitIncidencia(event)">
     <input type="hidden" id="incidenciaPCId">
-    <div class="form-group"><label>¿Qué le ocurre al equipo?</label><textarea id="incidenciaDesc" class="form-control" rows="3" required placeholder="La pantalla parpadea..."></textarea></div>
-    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Enviar Parte</button><br><br>
+    <div class="form-group"><label>Describe el problema detalladamente</label><textarea id="incidenciaDesc" class="form-control" rows="3" required placeholder="Ej: No enciende la pantalla, hace un pitido extraño al arrancar..."></textarea></div>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Enviar al Coordinador TIC</button><br><br>
     <button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cancelar</button>
   </form>
 </div></div>
@@ -267,19 +274,20 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
   <h3 id="modalUsuarioTitle">Registrar Profesor</h3><br>
   <form onsubmit="submitUsuario(event)">
     <input type="hidden" id="userFormId">
-    <div class="form-group"><label>Usuario Acceso (Username)</label><input type="text" id="userFormUsername" class="form-control" required placeholder="ej: jgarcia"></div>
-    <div class="form-group"><label>Nombre Completo</label><input type="text" id="userFormNombre" class="form-control" required placeholder="Juan García"></div>
-    <div class="form-group"><label>Email Corporativo</label><input type="email" id="userFormEmail" class="form-control" required placeholder="jgarcia@miguelhernandez.es"></div>
-    <div class="form-group" id="passFormGroup"><label>Contraseña Acceso</label><input type="password" id="userFormPassword" class="form-control" placeholder="Mínimo 6 caracteres"></div>
-    <div class="form-group"><label>Rol Organizativo</label><select id="userFormRol" class="form-control"><option value="profesorado">Profesorado</option><option value="admin">Administrador Técnico</option></select></div>
-    <div class="form-group" id="activoFormGroup" style="display:none;"><label>Estado de la Cuenta</label><select id="userFormActivo" class="form-control"><option value="true">Activo / Alta</option><option value="false">Inactivo / Baja</option></select></div>
-    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Guardar Registro</button><br><br>
+    <div class="form-group"><label>Nombre de Usuario (Login)</label><input type="text" id="userFormUsername" class="form-control" required placeholder="ej: mhernandez"></div>
+    <div class="form-group"><label>Nombre Completo</label><input type="text" id="userFormNombre" class="form-control" required placeholder="Miguel Hernández"></div>
+    <div class="form-group"><label>Correo Electrónico Corporativo</label><input type="email" id="userFormEmail" class="form-control" required placeholder="profesor@miguelhernandez.es"></div>
+    <div class="form-group" id="passFormGroup"><label>Contraseña del Sistema</label><input type="password" id="userFormPassword" class="form-control" placeholder="Mínimo 6 caracteres"></div>
+    <div class="form-group"><label>Rol Organizativo</label><select id="userFormRol" class="form-control"><option value="profesorado">Profesorado (Docente)</option><option value="admin">Administrador Técnico</option></select></div>
+    <div class="form-group" id="activoFormGroup" style="display:none;"><label>Estado de la Cuenta</label><select id="userFormActivo" class="form-control"><option value="true">Activo / En Servicio</option><option value="false">Inactivo / Baja Lógica</option></select></div>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Guardar Cambios en Ficha</button><br><br>
     <button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cancelar</button>
   </form>
 </div></div>
 
 <script>
-const API = 'https://multicentro-1.onrender.com/api'; // Reemplaza por tu URL de Render
+// !!! IMPORTANTE: Sustituye esta URL por tu dirección exacta de Render !!!
+const API = 'https://multicentro-1.onrender.com/api'; 
 
 let token = localStorage.getItem('token') || '';
 let currentUser = JSON.parse(localStorage.getItem('user')) || null;
@@ -302,7 +310,7 @@ async function handleLogin(e) {
       body: JSON.stringify({ email, password })
     });
     const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Acceso denegado.');
+    if (!r.ok) throw new Error(d.error || 'Acceso denegado al sistema.');
     token = d.token;
     currentUser = d.user;
     localStorage.setItem('token', token);
@@ -327,6 +335,8 @@ function showApp() {
   
   if(currentUser.rol === 'admin') {
     document.getElementById('nav-usuarios').style.display = 'flex';
+  } else {
+    document.getElementById('nav-usuarios').style.display = 'none';
   }
   switchView('dashboard');
 }
@@ -340,6 +350,9 @@ function switchView(view) {
   const currentPanel = document.getElementById(`view-${view}`);
   if(currentPanel) currentPanel.classList.add('active');
 
+  const titulos = { dashboard: 'Resumen General', reservas: 'Reservar Aulas', materiales: 'Inventario Materiales', ordenadores: 'Aulas Informáticas', usuarios: 'Gestión Claustro' };
+  document.getElementById('viewTitle').textContent = titulos[view] || 'Consola';
+
   if(view === 'dashboard') loadDashboard();
   if(view === 'reservas') loadReservas();
   if(view === 'materiales') loadMateriales();
@@ -352,11 +365,11 @@ async function req(path, method='GET', body=null) {
   if(body) { o.headers['Content-Type']='application/json'; o.body=JSON.stringify(body); }
   const r = await fetch(`${API}/${path}`, o);
   const d = await r.json();
-  if(!r.ok) throw new Error(d.error || 'Fallo de comunicación.');
+  if(!r.ok) throw new Error(d.error || 'Error en la petición de red.');
   return d;
 }
 
-// DASHBOARD
+// LÓGICA: DASHBOARD
 async function loadDashboard() {
   try {
     const d = await req('dashboard');
@@ -367,20 +380,24 @@ async function loadDashboard() {
     
     const b = document.getElementById('table-proximos');
     b.innerHTML = d.proximosEventos.length === 0 
-      ? `<tr><td colspan="5" style="text-align:center;">No hay reservas agendadas hoy.</td></tr>`
+      ? `<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No hay reservas agendadas en las próximas horas.</td></tr>`
       : d.proximosEventos.map(e => `<tr><td><strong>${e.sala}</strong></td><td>${e.titulo}</td><td>${e.profesor}</td><td>${fmtDT(e.inicio)}</td><td>${fmtDT(e.fin)}</td></tr>`).join('');
   } catch(e) { console.error(e); }
 }
 
-// RESERVAS
+// LÓGICA: RESERVAS DE AULAS
 async function loadReservas() {
   try {
     const ev = await req('eventos');
-    document.getElementById('table-reservas').innerHTML = ev.map(e => `<tr><td><strong>${e.sala_nombre}</strong></td><td>${e.profesor_nombre}</td><td>${e.titulo}</td><td><span class="badge badge-gray">${e.tipo}</span></td><td>${fmtDT(e.inicio)}</td><td>${fmtDT(e.fin)}</td></tr>`).join('');
+    document.getElementById('table-reservas').innerHTML = ev.length === 0
+      ? `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Sin historial de reservas activas.</td></tr>`
+      : ev.map(e => `<tr><td><strong>${e.sala_nombre}</strong></td><td>${e.profesor_nombre}</td><td>${e.titulo}</td><td><span class="badge badge-gray">${e.tipo.toUpperCase()}</span></td><td>${fmtDT(e.inicio)}</td><td>${fmtDT(e.fin)}</td></tr>`).join('');
+    
     const sa = await req('salas');
     document.getElementById('resSala').innerHTML = sa.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
   } catch(e) { console.error(e); }
 }
+
 async function submitReserva(e) {
   e.preventDefault();
   try {
@@ -396,17 +413,23 @@ async function submitReserva(e) {
   } catch(err) { alert(err.message); }
 }
 
-// MATERIALES
+// LÓGICA: INVENTARIO DE MATERIALES
 async function loadMateriales() {
   try {
     const mt = await req('materiales');
-    document.getElementById('table-materiales').innerHTML = mt.map(m => `<tr><td><strong>${m.nombre}</strong></td><td><span class="badge badge-blue">${m.categoria}</span></td><td>${m.disponibles} de ${m.total_uds} disp.</td><td>${m.descripcion||'—'}</td></tr>`).join('');
-    document.getElementById('preMat').innerHTML = mt.map(m => `<option value="${m.id}">${m.nombre}</option>`).join('');
+    document.getElementById('table-materiales').innerHTML = mt.length === 0
+      ? `<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">No hay materiales inventariados.</td></tr>`
+      : mt.map(m => `<tr><td><strong>${m.nombre}</strong></td><td><span class="badge badge-blue">${m.categoria.toUpperCase()}</span></td><td>${m.disponibles} de ${m.total_uds} unidades disp.</td><td>${m.descripcion||'Sin observaciones'}</td></tr>`).join('');
+    
+    document.getElementById('preMat').innerHTML = mt.map(m => `<option value="${m.id}">${m.nombre} (Disponibles: ${m.disponibles})</option>`).join('');
     
     const pr = await req('prestamos');
-    document.getElementById('table-prestamos-historial').innerHTML = pr.map(p => `<tr><td><strong>${p.material_nombre}</strong></td><td>${p.profesor_nombre}</td><td>${p.uds}</td><td>${fmtDT(p.inicio)}</td><td>${fmtDT(p.fin_previsto)}</td><td><span class="badge ${p.estado==='prestado'?'badge-red':'badge-green'}">${p.estado}</span></td><td>${p.estado==='prestado'?`<button class="btn btn-gold" style="padding:3px 6px; font-size:0.75rem;" onclick="devolverMat(${p.id})">Devolver</button>`:'—'}</td></tr>`).join('');
+    document.getElementById('table-prestamos-historial').innerHTML = pr.length === 0
+      ? `<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">No existen registros de salida de material.</td></tr>`
+      : pr.map(p => `<tr><td><strong>${p.material_nombre}</strong></td><td>${p.profesor_nombre}</td><td>${p.uds}</td><td>${fmtDT(p.inicio)}</td><td>${fmtDT(p.fin_previsto)}</td><td><span class="badge ${p.estado==='prestado'?'badge-red':'badge-green'}">${p.estado.toUpperCase()}</span></td><td>${p.estado==='prestado'?`<button class="btn btn-gold" style="padding:4px 8px; font-size:0.75rem;" onclick="devolverMat(${p.id})">Recibir Devolución</button>`:'—'}</td></tr>`).join('');
   } catch(e) { console.error(e); }
 }
+
 async function submitPrestamo(e) {
   e.preventDefault();
   try {
@@ -419,12 +442,13 @@ async function submitPrestamo(e) {
     closeModal(); loadMateriales();
   } catch(err) { alert(err.message); }
 }
+
 async function devolverMat(id) {
-  if(!confirm('¿Confirmar devolución?')) return;
+  if(!confirm('¿Confirmar la recepción del material y cerrar el préstamo?')) return;
   try { await req(`prestamos/${id}/devolver`, 'POST'); loadMateriales(); } catch(e) { alert(e.message); }
 }
 
-// MAPAS ORDENADORES
+// LÓGICA: MAPAS DE ORDENADORES INTERACTIVOS
 async function loadSalasPC() {
   try {
     const sl = await req('salas');
@@ -432,31 +456,43 @@ async function loadSalasPC() {
     if(sl.length > 0) loadPCOrdenadores();
   } catch(e) { console.error(e); }
 }
+
 async function loadPCOrdenadores() {
   const sId = document.getElementById('select-sala-pc').value;
   if(!sId) return;
   try {
     const ords = await req(`ordenadores/sala/${sId}`);
     const c = document.getElementById('pcGridContainer');
-    if(ords.length === 0) { c.innerHTML = '<p>Sin ordenadores configurados.</p>'; return; }
+    if(ords.length === 0) { c.innerHTML = '<p style="color:var(--text-muted); padding:10px;">Esta sala no tiene equipos informáticos mapeados en la base de datos.</p>'; return; }
+    
     let maxF = Math.max(...ords.map(o => o.fila)), maxC = Math.max(...ords.map(o => o.columna));
-    c.style.gridTemplateRows = `repeat(${maxF}, 1fr)`; c.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+    c.style.gridTemplateRows = `repeat(${maxF}, 1fr)`; 
+    c.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+    
     c.innerHTML = ords.map(o => `<div class="pc-node pc-${o.estado}" style="grid-row:${o.fila}; grid-column:${o.columna};" onclick="clickPC(${o.id},'${o.etiqueta}','${o.estado}')">🖥️<br>${o.etiqueta}</div>`).join('');
   } catch(e) { console.error(e); }
 }
+
 function clickPC(id, et, est) {
-  if(est === 'ko') { alert('Equipo averiado.'); return; }
+  if(est === 'ko') { alert(`El equipo ${et} está reportado como AVERIADO y pendiente de revisión.`); return; }
   document.getElementById('incidenciasDesc').value = '';
   document.getElementById('incidenciaPCId').value = id;
-  document.getElementById('incidenciaPCLabel').textContent = `Fallo en PC: ${et}`;
+  document.getElementById('incidenciaPCLabel').textContent = `Identificador de Equipo: ${et}`;
   openModal('modalIncidencia');
 }
+
 async function submitIncidencia(e) {
   e.preventDefault();
-  try { await req('incidencias', 'POST', { ordenador_id: document.getElementById('incidenciaPCId').value, descripcion: document.getElementById('incidenciaDesc').value }); closeModal(); loadPCOrdenadores(); } catch(err) { alert(err.message); }
+  try { 
+    await req('incidencias', 'POST', { 
+      ordenador_id: document.getElementById('incidenciaPCId').value, 
+      descripcion: document.getElementById('incidenciaDesc').value 
+    }); 
+    closeModal(); loadPCOrdenadores(); 
+  } catch(err) { alert(err.message); }
 }
 
-// 👥 LÓGICA DE GESTIÓN DE USUARIOS (NUEVO)
+// LÓGICA: GESTIÓN DE CLAUSTRO (ADMINISTRACIÓN)
 async function loadUsuarios() {
   try {
     const us = await req('usuarios');
@@ -468,7 +504,7 @@ async function loadUsuarios() {
         <td><span class="badge badge-gray">${u.rol.toUpperCase()}</span></td>
         <td><span class="badge ${u.activo ? 'badge-green' : 'badge-red'}">${u.activo ? 'ALTA' : 'BAJA'}</span></td>
         <td>
-          <button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditarUsuarioModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Editar</button>
+          <button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditarUsuarioModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Editar Ficha</button>
         </td>
       </tr>
     `).join('');
@@ -476,7 +512,7 @@ async function loadUsuarios() {
 }
 
 function openCrearUsuarioModal() {
-  document.getElementById('modalUsuarioTitle').textContent = 'Registrar Profesor';
+  document.getElementById('modalUsuarioTitle').textContent = 'Registrar Profesor / Alta Claustro';
   document.getElementById('userFormId').value = '';
   document.getElementById('userFormUsername').value = '';
   document.getElementById('userFormNombre').value = '';
@@ -489,13 +525,13 @@ function openCrearUsuarioModal() {
 }
 
 function openEditarUsuarioModal(u) {
-  document.getElementById('modalUsuarioTitle').textContent = 'Modificar Ficha';
+  document.getElementById('modalUsuarioTitle').textContent = 'Modificar Ficha de Docente';
   document.getElementById('userFormId').value = u.id;
   document.getElementById('userFormUsername').value = u.username;
   document.getElementById('userFormNombre').value = u.nombre;
   document.getElementById('userFormEmail').value = u.email;
   document.getElementById('userFormPassword').value = '';
-  document.getElementById('userFormPassword').required = false; // Opcional al editar
+  document.getElementById('userFormPassword').required = false; 
   document.getElementById('userFormRol').value = u.rol;
   document.getElementById('userFormActivo').value = u.activo ? 'true' : 'false';
   document.getElementById('activoFormGroup').style.display = 'block';
@@ -522,11 +558,11 @@ async function submitUsuario(e) {
     } else {
       await req('usuarios', 'POST', body);
     }
-    closeModal();
-    loadUsuarios();
+    closeModal(); loadUsuarios();
   } catch(err) { alert(err.message); }
 }
 
+// HELPERS COMUNES
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
 function fmtDT(d) { return d ? new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—'; }
