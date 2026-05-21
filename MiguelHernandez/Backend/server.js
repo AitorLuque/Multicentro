@@ -9,7 +9,6 @@ const { auth, role } = require('./middleware/auth');
 const app  = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Inicialización de conexión PostgreSQL con forzado de protocolo SSL para producción en nube (IPv4)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: isProduction ? { rejectUnauthorized: false } : false
@@ -18,226 +17,170 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
-// Helper optimizado de ejecución de consultas SQL nativas
 const q = (text, params) => pool.query(text, params).then(r => r.rows);
 
 // ============================================================
-// SISTEMA DE CONTROL DE ACCESO (AUTENTICACIÓN)
+// AUTENTICACIÓN
 // ============================================================
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
-  
+  if (!email || !password) return res.status(400).json({ error: 'Faltan campos.' });
   try {
     const loginLimpio = email.trim().toLowerCase();
-    console.log(`[LOGIN TRY] Buscando usuario con: "${loginLimpio}"`);
-
-    // Consulta ultra-flexible: limpia espacios y convierte a minúsculas tanto columna como parámetro
     const [user] = await q(
       'SELECT * FROM usuarios WHERE (LOWER(TRIM(email)) = $1 OR LOWER(TRIM(username)) = $1) AND activo=TRUE', 
       [loginLimpio]
     );
-    
-    if (!user) {
-      console.log(`[LOGIN FAIL] No se encontró ningún usuario activo que coincida con: "${loginLimpio}"`);
-      return res.status(401).json({ error: 'Credenciales inválidas.' });
-    }
+    if (!user) return res.status(401).json({ error: 'Credenciales inválidas.' });
     
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      console.log(`[LOGIN FAIL] Usuario encontrado ("${user.username}"), pero la contraseña no coincide.`);
-      return res.status(401).json({ error: 'Credenciales inválidas.' });
-    }
-
-    console.log(`[LOGIN SUCCESS] Sesión iniciada con éxito para: ${user.username}`);
+    if (!valid) return res.status(401).json({ error: 'Credenciales inválidas.' });
 
     const token = jwt.sign(
-      { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, username: user.username },
+      { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );
-    
-    res.json({ 
-      token, 
-      user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, username: user.username } 
-    });
+    res.json({ token, user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol } });
   } catch (err) {
-    console.error('Error crítico en login:', err);
-    res.status(500).json({ error: 'Error interno en el servidor de control.' });
+    res.status(500).json({ error: 'Error de login.' });
   }
 });
 
 // ============================================================
-// SERVICIOS CORE DEL CUADRO DE MANDOS (DASHBOARD GLOBAL)
+// CONTROL DE USUARIOS / CLAUSTRO (NUEVAS FUNCIONES EXTRAÍDAS)
+// ============================================================
+app.get('/api/usuarios', auth, role('admin'), async (req, res) => {
+  try {
+    const rows = await q('SELECT id, username, nombre, email, rol, activo FROM usuarios ORDER BY nombre ASC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al listar usuarios.' });
+  }
+});
+
+app.post('/api/usuarios', auth, role('admin'), async (req, res) => {
+  const { username, nombre, email, password, rol } = req.body;
+  if(!username || !nombre || !email || !password) return res.status(400).json({ error: 'Faltan datos obligatorios.' });
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    await q(
+      'INSERT INTO usuarios (username, nombre, email, password_hash, rol, activo) VALUES ($1, $2, $3, $4, $5, true)',
+      [username.trim().toLowerCase(), nombre, email.trim().toLowerCase(), hash, rol || 'profesorado']
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'El usuario o el correo electrónico ya están registrados.' });
+  }
+});
+
+app.put('/api/usuarios/:id', auth, role('admin'), async (req, res) => {
+  const { username, nombre, email, rol, activo, password } = req.body;
+  try {
+    if (password) {
+      const hash = await bcrypt.hash(password, 10);
+      await q(
+        'UPDATE usuarios SET username=$1, nombre=$2, email=$3, rol=$4, activo=$5, password_hash=$6 WHERE id=$7',
+        [username, nombre, email, rol, activo, hash, req.params.id]
+      );
+    } else {
+      await q(
+        'UPDATE usuarios SET username=$1, nombre=$2, email=$3, rol=$4, activo=$5 WHERE id=$6',
+        [username, nombre, email, rol, activo, req.params.id]
+      );
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'Error al actualizar la ficha del usuario.' });
+  }
+});
+
+// ============================================================
+// DASHBOARD GLOBAL
 // ============================================================
 app.get('/api/dashboard', auth, async (req, res) => {
   try {
-    const [
-      totalSalas,
-      salasLibres,
-      prestamosActivos,
-      incidenciasAbiertas,
-      proximosEventos,
-      totalMateriales
-    ] = await Promise.all([
+    const [totalSalas, salasLibres, prestamosActivos, incidenciasAbiertas, proximosEventos] = await Promise.all([
       q("SELECT COUNT(*) FROM salas WHERE estado='ok'"),
       q("SELECT COUNT(*) FROM salas WHERE estado='ok' AND id NOT IN (SELECT sala_id FROM eventos WHERE estado='activo' AND NOW() BETWEEN inicio AND fin)"),
       q("SELECT COUNT(*) FROM prestamos_material WHERE estado='prestado'"),
       q("SELECT COUNT(*) FROM incidencias_equipo WHERE resuelta=FALSE"),
-      q(`SELECT e.id, e.titulo, e.tipo, e.inicio, e.fin, s.nombre AS sala, u.nombre AS profesor
-         FROM eventos e
-         JOIN salas s ON s.id=e.sala_id
-         JOIN usuarios u ON u.id=e.profesor_id
-         WHERE e.estado='activo' AND e.inicio > NOW()
-         ORDER BY e.inicio LIMIT 5`),
-      q("SELECT COUNT(*) FROM materiales WHERE activo=TRUE")
+      q(`SELECT e.id, e.titulo, e.tipo, e.inicio, e.fin, s.nombre AS sala, u.nombre AS profesor FROM eventos e JOIN salas s ON s.id=e.sala_id JOIN usuarios u ON u.id=e.profesor_id WHERE e.estado='activo' AND e.inicio > NOW() ORDER BY e.inicio LIMIT 5`)
     ]);
-
     res.json({
-      totalSalas:          parseInt(totalSalas[0].count),
-      salasLibres:         parseInt(salasLibres[0].count),
-      prestamosActivos:    parseInt(prestamosActivos[0].count),
+      totalSalas: parseInt(totalSalas[0].count),
+      salasLibres: parseInt(salasLibres[0].count),
+      prestamosActivos: parseInt(prestamosActivos[0].count),
       incidenciasAbiertas: parseInt(incidenciasAbiertas[0].count),
-      proximosEventos,
-      totalMateriales:     parseInt(totalMateriales[0].count)
-  });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Fallo al computar métricas generales.' });
-  }
+      proximosEventos
+    });
+  } catch (err) { res.status(500).json({ error: 'Error de panel.' }); }
 });
 
 // ============================================================
-// INFRAESTRUCTURA DE EDIFICIOS
+// AULAS Y AGENDAS
 // ============================================================
-app.get('/api/plantas', auth, async (req, res) => {
-  try {
-    const rows = await q('SELECT * FROM plantas ORDER BY nombre');
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al recuperar catálogo de plantas.' });
-  }
-});
-
 app.get('/api/salas', auth, async (req, res) => {
-  try {
-    const rows = await q('SELECT s.*, p.nombre AS planta_nombre FROM salas s JOIN plantas p ON p.id=s.planta_id ORDER BY s.nombre');
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al recuperar listado de aulas.' });
-  }
+  try { res.json(await q('SELECT * FROM salas ORDER BY nombre')); } catch (err) { res.status(500).json({ error: 'Error.' }); }
 });
 
-// ============================================================
-// RESERVAS DE AULAS (CALENDARIO)
-// ============================================================
 app.get('/api/eventos', auth, async (req, res) => {
   try {
-    const rows = await q(`
-      SELECT e.*, s.nombre AS sala_nombre, u.nombre AS profesor_nombre 
-      FROM eventos e 
-      JOIN salas s ON s.id=e.sala_id 
-      JOIN usuarios u ON u.id=e.profesor_id 
-      WHERE e.estado='activo'
-      ORDER BY e.inicio
-    `);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al mapear la agenda.' });
-  }
+    res.json(await q(`SELECT e.*, s.nombre AS sala_nombre, u.nombre AS profesor_nombre FROM eventos e JOIN salas s ON s.id=e.sala_id JOIN usuarios u ON u.id=e.profesor_id WHERE e.estado='activo' ORDER BY e.inicio`));
+  } catch (err) { res.status(500).json({ error: 'Error.' }); }
 });
 
 app.post('/api/eventos', auth, async (req, res) => {
   const { sala_id, titulo, descripcion, tipo, inicio, fin } = req.body;
   try {
-    const solapados = await q(
-      `SELECT * FROM eventos WHERE sala_id=$1 AND estado='activo' AND NOT (fin <= $2 OR inicio >= $3)`,
-      [sala_id, inicio, fin]
-    );
-    if (solapados.length > 0) return res.status(400).json({ error: 'El aula ya dispone de una reserva confirmada en esta misma hora.' });
-
-    await q(
-      `INSERT INTO eventos (sala_id, profesor_id, titulo, descripcion, tipo, inicio, fin) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [sala_id, req.user.id, titulo, descripcion, tipo, inicio, fin]
-    );
+    const solapados = await q(`SELECT * FROM eventos WHERE sala_id=$1 AND estado='activo' AND NOT (fin <= $2 OR inicio >= $3)`, [sala_id, inicio, fin]);
+    if (solapados.length > 0) return res.status(400).json({ error: 'Horario ya ocupado.' });
+    await q(`INSERT INTO eventos (sala_id, profesor_id, titulo, descripcion, tipo, inicio, fin) VALUES ($1, $2, $3, $4, $5, $6, $7)`, [sala_id, req.user.id, titulo, descripcion, tipo, inicio, fin]);
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Error al formalizar la reserva de aula.' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Error.' }); }
 });
 
 // ============================================================
-// INVENTARIO DE INSUMOS Y RECURSOS MÓVILES
+// MATERIALES
 // ============================================================
 app.get('/api/materiales', auth, async (req, res) => {
-  try {
-    const rows = await q('SELECT * FROM materiales WHERE activo=TRUE ORDER BY nombre');
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al recuperar inventario de materiales.' });
-  }
+  try { res.json(await q('SELECT * FROM materiales WHERE activo=TRUE ORDER BY nombre')); } catch (err) { res.status(500).json({ error: 'Error.' }); }
 });
 
 app.get('/api/prestamos', auth, async (req, res) => {
   try {
-    const rows = await q(`
-      SELECT pm.*, m.nombre AS material_nombre, u.nombre AS profesor_nombre 
-      FROM prestamos_material pm 
-      JOIN materiales m ON m.id=pm.material_id 
-      JOIN usuarios u ON u.id=pm.profesor_id 
-      ORDER BY pm.inicio DESC
-    `);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al volcar auditoría de préstamos.' });
-  }
+    res.json(await q(`SELECT pm.*, m.nombre AS material_nombre, u.nombre AS profesor_nombre FROM prestamos_material pm JOIN materiales m ON m.id=pm.material_id JOIN usuarios u ON u.id=pm.profesor_id ORDER BY pm.inicio DESC`));
+  } catch (err) { res.status(500).json({ error: 'Error.' }); }
 });
 
 app.post('/api/prestamos', auth, async (req, res) => {
   const { material_id, uds, fin_previsto, notas } = req.body;
   try {
     const [mat] = await q('SELECT disponibles FROM materiales WHERE id=$1', [material_id]);
-    if (!mat || mat.disponibles < uds) return res.status(400).json({ error: 'Existencias insuficientes para satisfacer la dotación requerida.' });
-
+    if (!mat || mat.disponibles < uds) return res.status(400).json({ error: 'Unidades no disponibles.' });
     await q('BEGIN');
     await q('UPDATE materiales SET disponibles = disponibles - $1 WHERE id=$2', [uds, material_id]);
-    await q(`INSERT INTO prestamos_material (material_id, profesor_id, uds, fin_previsto, notas) 
-             VALUES ($1, $2, $3, $4, $5)`, [material_id, req.user.id, uds, fin_previsto, notas]);
-    await q('COMMIT');
-    res.json({ success: true });
-  } catch (err) {
-    await q('ROLLBACK');
-    res.status(500).json({ error: 'Error transaccional en préstamo.' });
-  }
+    await q(`INSERT INTO prestamos_material (material_id, profesor_id, uds, fin_previsto, notas) VALUES ($1, $2, $3, $4, $5)`, [material_id, req.user.id, uds, fin_previsto, notas]);
+    await q('COMMIT'); res.json({ success: true });
+  } catch (err) { await q('ROLLBACK'); res.status(500).json({ error: 'Error.' }); }
 });
 
 app.post('/api/prestamos/:id/devolver', auth, async (req, res) => {
   try {
-    const [prestamo] = await q("SELECT * FROM prestamos_material WHERE id=$1 AND estado='prestado'", [req.params.id]);
-    if (!prestamo) return res.status(404).json({ error: 'Ficha de adjudicación inactiva o previamente devuelta.' });
-
+    const [p] = await q("SELECT * FROM prestamos_material WHERE id=$1 AND estado='prestado'", [req.params.id]);
+    if (!p) return res.status(404).json({ error: 'Inexistente.' });
     await q('BEGIN');
     await q("UPDATE prestamos_material SET estado='devuelto', fin_real=NOW() WHERE id=$1", [req.params.id]);
-    await q('UPDATE materiales SET disponibles = disponibles + $1 WHERE id=$2', [prestamo.uds, prestamo.material_id]);
-    await q('COMMIT');
-    res.json({ success: true });
-  } catch (err) {
-    await q('ROLLBACK');
-    res.status(500).json({ error: 'Fallo al procesar retorno físico.' });
-  }
+    await q('UPDATE materiales SET disponibles = disponibles + $1 WHERE id=$2', [p.uds, p.material_id]);
+    await q('COMMIT'); res.json({ success: true });
+  } catch (err) { await q('ROLLBACK'); res.status(500).json({ error: 'Error.' }); }
 });
 
 // ============================================================
-// MAPAS HARDWARE E INFORMÁTICA DE AULAS
+// MAPAS ORDENADORES
 // ============================================================
 app.get('/api/ordenadores/sala/:salaId', auth, async (req, res) => {
-  try {
-    const rows = await q('SELECT * FROM ordenadores WHERE sala_id=$1 ORDER BY fila, columna', [req.params.salaId]);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al escanear terminales.' });
-  }
+  try { res.json(await q('SELECT * FROM ordenadores WHERE sala_id=$1 ORDER BY fila, columna', [req.params.salaId])); } catch (err) { res.status(500).json({ error: 'Error.' }); }
 });
 
 app.post('/api/incidencias', auth, async (req, res) => {
@@ -246,50 +189,9 @@ app.post('/api/incidencias', auth, async (req, res) => {
     await q('BEGIN');
     await q(`INSERT INTO incidencias_equipo (ordenador_id, profesor_id, descripcion) VALUES ($1, $2, $3)`, [ordenador_id, req.user.id, descripcion]);
     await q("UPDATE ordenadores SET estado='ko' WHERE id=$1", [ordenador_id]);
-    await q('COMMIT');
-    res.json({ success: true });
-  } catch (err) {
-    await q('ROLLBACK');
-    res.status(500).json({ error: 'Fallo al asentar informe de avería.' });
-  }
-});
-
-app.get('/api/incidencias', auth, role('admin'), async (req, res) => {
-  try {
-    const rows = await q(`
-      SELECT ie.*, o.etiqueta, s.nombre AS sala_nombre, u.nombre AS profesor_nombre 
-      FROM incidencias_equipo ie 
-      JOIN ordenadores o ON o.id=ie.ordenador_id 
-      JOIN salas s ON s.id=o.sala_id 
-      JOIN usuarios u ON u.id=ie.profesor_id 
-      ORDER BY ie.created_at DESC
-    `);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al compilar incidencias globales.' });
-  }
-});
-
-app.post('/api/incidencias/:id/resolver', auth, role('admin'), async (req, res) => {
-  const { comentario_resolucion, nuevo_estado_equipo } = req.body;
-  try {
-    const [incidencia] = await q('SELECT ordenador_id FROM incidencias_equipo WHERE id=$1', [req.params.id]);
-    if (!incidencia) return res.status(404).json({ error: 'Registro de incidencia inexistente.' });
-
-    await q('BEGIN');
-    await q(`UPDATE incidencias_equipo 
-             SET resuelta=TRUE, fecha_resolucion=NOW(), comentario_resolucion=$1, estado=$2 
-             WHERE id=$3`, [comentario_resolucion, nuevo_estado_equipo, req.params.id]);
-    await q('UPDATE ordenadores SET estado=$1 WHERE id=$2', [nuevo_estado_equipo, incidencia.ordenador_id]);
-    await q('COMMIT');
-    res.json({ success: true });
-  } catch (err) {
-    await q('ROLLBACK');
-    res.status(500).json({ error: 'Fallo al archivar resolución.' });
-  }
+    await q('COMMIT'); res.json({ success: true });
+  } catch (err) { await q('ROLLBACK'); res.status(500).json({ error: 'Error.' }); }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`[CEIP Miguel Hernández API] Corriendo de forma exclusiva en puerto ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
