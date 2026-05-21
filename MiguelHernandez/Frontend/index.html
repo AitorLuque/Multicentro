@@ -274,7 +274,7 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
   <h3 id="modalAulaTitle">Configurar Espacio / Aula</h3><br>
   <form onsubmit="submitAula(event)">
     <input type="hidden" id="aulaFormId">
-    <div class="form-group"><label>Nombre del Aula</label><input type="text" id="aulaFormNombre" class="form-control" required placeholder="Ej: Aula Althia, Laboratorio de Física"></div>
+    <input type="hidden" id="aulaFormPlantaId" value="1"> <div class="form-group"><label>Nombre del Aula</label><input type="text" id="aulaFormNombre" class="form-control" required placeholder="Ej: Aula Althia, Laboratorio de Física"></div>
     <div class="form-group"><label>Código Único Identificativo</label><input type="text" id="aulaFormCodigo" class="form-control" required placeholder="Ej: ALTHIA-01, LAB-FISICA"></div>
     <div class="form-group"><label>Tipo de Aula</label><select id="aulaFormTipo" class="form-control"><option value="aula">🏫 Aula</option><option value="laboratorio">🔬 Laboratorio</option><option value="sala_reunion">🤝 Reuniones</option><option value="salon">🎤 Salón</option></select></div>
     <div class="form-group"><label>Capacidad Máxima</label><input type="number" id="aulaFormCapacidad" class="form-control" min="1" value="25" required></div>
@@ -324,9 +324,9 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
     <form onsubmit="submitModificarPC(event)">
       <div class="form-group"><label>Etiqueta / Nombre Visible</label><input type="text" id="editPCFormEtiqueta" class="form-control" required></div>
       <div class="form-group"><label>Especificación CPU</label><input type="text" id="editPCFormCPU" class="form-control"></div>
-      <div class="form-group"><label>Cantidad de Memoria RAM</label><input type="text" id="editPCFormRAM" class="form-control" placeholder="Ej: 8GB, 16GB"></div>
-      <div class="form-group"><label>Disco de Almacenamiento</label><input type="text" id="editPCFormDisco" class="form-control" placeholder="Ej: 256GB SSD"></div>
-      <div class="form-group"><label>Sistema Operativo Instalado</label><input type="text" id="editPCFormSO" class="form-control" placeholder="Ej: Windows 11, Ubuntu 24.04"></div>
+      <div class="form-group"><label>Cantidad de Memoria RAM</label><input type="text" id="editPCFormRAM" class="form-control"></div>
+      <div class="form-group"><label>Disco de Almacenamiento</label><input type="text" id="editPCFormDisco" class="form-control"></div>
+      <div class="form-group"><label>Sistema Operativo Instalado</label><input type="text" id="editPCFormSO" class="form-control"></div>
       <div class="form-group"><label>Fila (Coordenada X)</label><input type="number" id="editPCFormFila" class="form-control" min="1" required></div>
       <div class="form-group"><label>Columna (Coordenada Y)</label><input type="number" id="editPCFormColumna" class="form-control" min="1" required></div>
       <div class="form-group"><label>Estado del Hardware</label><select id="editPCFormEstado" class="form-control"><option value="ok">Funcionando Correctamente (OK)</option><option value="ko">Averiado / Fuera de Servicio</option><option value="reparacion">En Taller / Mantenimiento</option></select></div>
@@ -339,13 +339,13 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 <div id="modalCrearPC" class="modal-overlay"><div class="modal-window">
   <h3>Dar de Alta Nuevo Equipo Informático</h3><br>
   <form onsubmit="submitCrearPC(event)">
-    <div class="form-group"><label>Etiqueta / Nombre de Red</label><input type="text" id="addPCFormEtiqueta" class="form-control" required placeholder="Ej: PC-15, PC-MINI"></div>
+    <div class="form-group"><label>Etiqueta / Nombre de Red</label><input type="text" id="addPCFormEtiqueta" class="form-control" required placeholder="Ej: PC-15"></div>
     <div class="form-group"><label>Procesador (CPU)</label><input type="text" id="addPCFormCPU" class="form-control" value="Intel i5"></div>
     <div class="form-group"><label>Memoria RAM</label><input type="text" id="addPCFormRAM" class="form-control" value="8GB"></div>
     <div class="form-group"><label>Disco</label><input type="text" id="addPCFormDisco" class="form-control" value="256GB SSD"></div>
     <div class="form-group"><label>Sistema Operativo</label><input type="text" id="addPCFormSO" class="form-control" value="Ubuntu 22.04"></div>
-    <div class="form-group"><label>Fila de Ubicación en el Aula</label><input type="number" id="addPCFormFila" class="form-control" min="1" value="1" required></div>
-    <div class="form-group"><label>Columna de Ubicación en el Aula</label><input type="number" id="addPCFormColumna" class="form-control" min="1" value="1" required></div>
+    <div class="form-group"><label>Fila de Ubicación</label><input type="number" id="addPCFormFila" class="form-control" min="1" value="1" required></div>
+    <div class="form-group"><label>Columna de Ubicación</label><input type="number" id="addPCFormColumna" class="form-control" min="1" value="1" required></div>
     <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Insertar en Mapa de Sala</button><br><br>
     <button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cancelar</button>
   </form>
@@ -371,7 +371,7 @@ const API = 'https://multicentro-1.onrender.com/api';
 
 let token = localStorage.getItem('token') || '';
 let currentUser = JSON.parse(localStorage.getItem('user')) || null;
-let currentCacheOrdenadores = []; // Almacén temporal de los PCs cargados en la sala activa
+let currentCacheOrdenadores = []; 
 
 window.addEventListener('DOMContentLoaded', () => {
   if (token && currentUser) showApp();
@@ -448,7 +448,7 @@ async function req(path, method='GET', body=null) {
   if(body) { o.headers['Content-Type']='application/json'; o.body=JSON.stringify(body); }
   const r = await fetch(`${API}/${path}`, o);
   const d = await r.json();
-  if(!r.ok) throw new Error(d.error || 'Error en la petición de red.');
+  if(!r.ok) throw new Error(d.error || 'Error interno del servidor.');
   return d;
 }
 
@@ -497,6 +497,7 @@ async function loadReservas() {
 function openCrearAulaModal() {
   document.getElementById('modalAulaTitle').textContent = 'Configurar Nuevo Espacio Escolar';
   document.getElementById('aulaFormId').value = '';
+  document.getElementById('aulaFormPlantaId').value = '1'; // Inyección estructural mandatoria de seguridad
   document.getElementById('aulaFormNombre').value = '';
   document.getElementById('aulaFormCodigo').value = '';
   document.getElementById('aulaFormTipo').value = 'aula';
@@ -508,6 +509,7 @@ function openCrearAulaModal() {
 function openEditarAulaModal(s) {
   document.getElementById('modalAulaTitle').textContent = 'Modificar Parámetros de Aula';
   document.getElementById('aulaFormId').value = s.id;
+  document.getElementById('aulaFormPlantaId').value = s.planta_id || '1';
   document.getElementById('aulaFormNombre').value = s.nombre;
   document.getElementById('aulaFormCodigo').value = s.codigo;
   document.getElementById('aulaFormTipo').value = s.tipo;
@@ -520,6 +522,7 @@ async function submitAula(e) {
   e.preventDefault();
   const id = document.getElementById('aulaFormId').value;
   const body = {
+    planta_id: parseInt(document.getElementById('aulaFormPlantaId').value || '1'), // Blindaje contra el error JSON/HTML
     nombre: document.getElementById('aulaFormNombre').value,
     codigo: document.getElementById('aulaFormCodigo').value,
     tipo: document.getElementById('aulaFormTipo').value,
@@ -663,7 +666,7 @@ function clickPC(id) {
   document.getElementById('incidenciaPCLabel').innerHTML = `Equipo: <strong>${target.etiqueta}</strong><br><small style="color:var(--text-muted);">${target.cpu || 'i5'} | ${target.ram || '8GB'} RAM | ${target.sistema_operativo || 'Ubuntu'}</small>`;
   document.getElementById('incidenciaDesc').value = '';
 
-  const isAdmin = currentUser.role === 'admin' || currentUser.rol === 'admin';
+  const isAdmin = currentUser.rol === 'admin';
   const adminZone = document.getElementById('admin-pc-edit-zone');
   
   if (isAdmin) {
@@ -712,7 +715,9 @@ async function submitCrearPC(e) {
 async function submitModificarPC(e) {
   e.preventDefault();
   const id = document.getElementById('incidenciaPCId').value;
+  const sId = document.getElementById('select-sala-pc').value;
   const body = {
+    sala_id: parseInt(sId), // Inyección estructural del ID de sala activo
     etiqueta: document.getElementById('editPCFormEtiqueta').value,
     cpu: document.getElementById('editPCFormCPU').value,
     ram: document.getElementById('editPCFormRAM').value,
