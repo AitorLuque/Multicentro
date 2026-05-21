@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CEIP Miguel Hernández — Sistema de Gestión</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=600;700&family=Source+Sans+3:wght=300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
   --navy:     #1a2744;
@@ -29,9 +29,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Source Sans 3', sans-serif; background: var(--cream); color: var(--text); display: flex; min-height: 100vh; flex-direction: row; }
 
-/* ============================================================
-   DISEÑO RESPONSIVO FLUIDO (MÓVIL & TABLET)
-   ============================================================ */
+/* DISEÑO RESPONSIVO FLUIDO (MÓVIL & TABLET) */
 @media (max-width: 768px) {
   body { flex-direction: column; }
   .sidebar { width: 100% !important; height: auto !important; border-right: none !important; border-bottom: 1px solid var(--navy-mid); }
@@ -179,7 +177,10 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
   <section id="view-reservas" class="view-panel">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
       <h3>Cuadrante General de Ocupación</h3>
-      <button class="btn btn-primary" onclick="openModal('modalReserva')">+ Agendar Nueva Reserva</button>
+      <div style="display: flex; gap: 10px;">
+        <button id="btn-admin-aula" class="btn btn-gold" onclick="openCrearAulaModal()" style="display:none;">+ Configurar Aula</button>
+        <button class="btn btn-primary" onclick="openModal('modalReserva')">+ Agendar Nueva Reserva</button>
+      </div>
     </div>
     <div class="table-container">
       <table>
@@ -187,16 +188,29 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
         <tbody id="table-reservas"></tbody>
       </table>
     </div>
+    
+    <div id="admin-salas-section" style="display:none; margin-top: 35px;">
+      <h3>Aulas Registradas (Configuración)</h3>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Nombre Aula</th><th>Código Único</th><th>Tipo de Espacio</th><th>Capacidad Alumnos</th><th>Ubicación / Notas</th><th>Operaciones</th></tr></thead>
+          <tbody id="table-admin-salas"></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <section id="view-materiales" class="view-panel">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
       <h3>Inventario de Recursos Móviles</h3>
-      <button class="btn btn-primary" onclick="openModal('modalPrestamo')">+ Registrar Salida / Préstamo</button>
+      <div style="display: flex; gap: 10px;">
+        <button id="btn-admin-material" class="btn btn-gold" onclick="openCrearMaterialModal()" style="display:none;">+ Añadir Material Nuevo</button>
+        <button class="btn btn-primary" onclick="openModal('modalPrestamo')">+ Registrar Salida / Préstamo</button>
+      </div>
     </div>
     <div class="table-container">
       <table>
-        <thead><tr><th>Nombre del Recurso</th><th>Categoría</th><th>Disponibilidad en Almacén</th><th>Características</th></tr></thead>
+        <thead><tr><th>Nombre del Recurso</th><th>Categoría</th><th>Disponibilidad en Almacén</th><th>Características</th><th>Operaciones</th></tr></thead>
         <tbody id="table-materiales"></tbody>
       </table>
     </div>
@@ -210,9 +224,12 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
   </section>
 
   <section id="view-ordenadores" class="view-panel">
-    <div class="form-group" style="max-width: 320px; margin-bottom: 20px;">
-      <label>Seleccionar Aula Informática</label>
-      <select id="select-sala-pc" class="form-control" onchange="loadPCOrdenadores()"></select>
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+      <div class="form-group" style="max-width: 320px; margin-bottom: 0; flex: 1;">
+        <label>Seleccionar Aula Informática</label>
+        <select id="select-sala-pc" class="form-control" onchange="loadPCOrdenadores()"></select>
+      </div>
+      <button id="btn-admin-pc" class="btn btn-gold" onclick="openCrearPCModal()" style="display:none;">+ Dar de Alta Ordenador en esta Sala</button>
     </div>
     <div style="width: 100%; overflow-x: auto; text-align: center;">
       <div id="pcGridContainer" class="grid-pc-layout"></div>
@@ -220,15 +237,21 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
   </section>
 
   <section id="view-usuarios" class="view-panel">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h3>Claustro Escolar Registrado</h3>
-      <button class="btn btn-primary" onclick="openCrearUsuarioModal()">+ Dar de Alta Profesor</button>
+    <div id="admin-users-content" style="display:none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h3>Claustro Escolar Registrado</h3>
+        <button class="btn btn-primary" onclick="openCrearUsuarioModal()">+ Dar de Alta Profesor</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Nombre de Usuario</th><th>Nombre Completo</th><th>Email Corporativo</th><th>Rol</th><th>Estado Cuenta</th><th>Operaciones</th></tr></thead>
+          <tbody id="table-usuarios"></tbody>
+        </table>
+      </div>
     </div>
-    <div class="table-container">
-      <table>
-        <thead><tr><th>Nombre de Usuario</th><th>Nombre Completo</th><th>Email Corporativo</th><th>Rol</th><th>Estado Cuenta</th><th>Operaciones</th></tr></thead>
-        <tbody id="table-usuarios"></tbody>
-      </table>
+    <div id="admin-users-denied" style="display:none; text-align:center; padding:40px; color:var(--red); background:var(--red-lt); border-radius:6px; border:1px solid #f5c6c6;">
+      <h3>🔒 Acceso Restringido</h3>
+      <p style="margin-top:10px; font-size:0.95rem;">No dispones de los permisos de Administrador Técnico necesarios para gestionar el claustro.</p>
     </div>
   </section>
 </main>
@@ -242,7 +265,21 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
     <div class="form-group"><label>Tipo de Evento</label><select id="resTipo" class="form-control"><option value="general">Clase General</option><option value="examen">Sesión de Examen</option><option value="charla">Charla / Evento</option></select></div>
     <div class="form-group"><label>Fecha e Hora de Inicio</label><input type="datetime-local" id="resInicio" class="form-control" required></div>
     <div class="form-group"><label>Fecha e Hora de Fin</label><input type="datetime-local" id="resFin" class="form-control" required></div>
-    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Confirmar y Bloquear Horario</button><br><br>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Confirmar Horario</button><br><br>
+    <button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cancelar</button>
+  </form>
+</div></div>
+
+<div id="modalAula" class="modal-overlay"><div class="modal-window">
+  <h3 id="modalAulaTitle">Configurar Espacio / Aula</h3><br>
+  <form onsubmit="submitAula(event)">
+    <input type="hidden" id="aulaFormId">
+    <div class="form-group"><label>Nombre del Aula</label><input type="text" id="aulaFormNombre" class="form-control" required placeholder="Ej: Aula Althia, Laboratorio de Física"></div>
+    <div class="form-group"><label>Código Único Identificativo</label><input type="text" id="aulaFormCodigo" class="form-control" required placeholder="Ej: ALTHIA-01, LAB-FISICA"></div>
+    <div class="form-group"><label>Tipo de Aula</label><select id="aulaFormTipo" class="form-control"><option value="aula">🏫 Aula</option><option value="laboratorio">🔬 Laboratorio</option><option value="sala_reunion">🤝 Reuniones</option><option value="salon">🎤 Salón</option></select></div>
+    <div class="form-group"><label>Capacidad Máxima</label><input type="number" id="aulaFormCapacidad" class="form-control" min="1" value="25" required></div>
+    <div class="form-group"><label>Ubicación / Notas Internas</label><input type="text" id="aulaFormUbicacion" class="form-control" placeholder="Ej: Planta Primera, Pasillo Izquierdo"></div>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Guardar Configuración de Aula</button><br><br>
     <button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cancelar</button>
   </form>
 </div></div>
@@ -259,13 +296,57 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
   </form>
 </div></div>
 
+<div id="modalMaterial" class="modal-overlay"><div class="modal-window">
+  <h3 id="modalMaterialTitle">Ficha de Recurso en Almacén</h3><br>
+  <form onsubmit="submitMaterial(event)">
+    <input type="hidden" id="matFormId">
+    <div class="form-group"><label>Nombre del Material</label><input type="text" id="matFormNombre" class="form-control" required placeholder="Ej: Portátil Lenovo ThinkPad, Carro Tablets"></div>
+    <div class="form-group"><label>Categoría</label><select id="matFormCategoria" class="form-control"><option value="portatiles">Portátiles</option><option value="lapices_digitales">Lápices digitales</option><option value="proyectores">Proyectores</option><option value="otros">Otros Equipos Móviles</option></select></div>
+    <div class="form-group"><label>Total Unidades Adquiridas</label><input type="number" id="matFormTotal" class="form-control" min="1" value="1" required></div>
+    <div class="form-group"><label>Descripción / Características Técnicas</label><textarea id="matFormDesc" class="form-control" rows="2" placeholder="Ej: Procesador Ryzen 5, 8GB RAM, Windows 11"></textarea></div>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Guardar Ficha en Inventario</button><br><br>
+    <button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cancelar</button>
+  </form>
+</div></div>
+
 <div id="modalIncidencia" class="modal-overlay"><div class="modal-window">
-  <h3 style="color:var(--red);">Reportar Parte de Avería Física</h3><br>
+  <h3 id="pcModalActionTitle" style="color:var(--navy);">Operaciones sobre Equipo</h3><br>
   <p id="incidenciaPCLabel" style="font-weight:600;"></p><br>
-  <form onsubmit="submitIncidencia(event)">
+  
+  <form id="form-incidencia-basica" onsubmit="submitIncidencia(event)">
     <input type="hidden" id="incidenciaPCId">
-    <div class="form-group"><label>Describe el problema detalladamente</label><textarea id="incidenciaDesc" class="form-control" rows="3" required placeholder="Ej: No enciende la pantalla, hace un pitido extraño al arrancar..."></textarea></div>
-    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Enviar al Coordinador TIC</button><br><br>
+    <div class="form-group"><label>Reportar Parte de Avería Física (Docentes)</label><textarea id="incidenciaDesc" class="form-control" rows="2" placeholder="Describa el fallo técnico observado..."></textarea></div>
+    <button type="submit" class="btn btn-danger" style="width:100%; justify-content:center;">Enviar Parte Técnico</button>
+  </form>
+  
+  <div id="admin-pc-edit-zone" style="display:none; margin-top:20px; border-top:1px dashed var(--gray-3); padding-top:15px;">
+    <h4 style="color:var(--gold); margin-bottom:10px;">Modificar Ficha Técnica Avanzada</h4>
+    <form onsubmit="submitModificarPC(event)">
+      <div class="form-group"><label>Etiqueta / Nombre Visible</label><input type="text" id="editPCFormEtiqueta" class="form-control" required></div>
+      <div class="form-group"><label>Especificación CPU</label><input type="text" id="editPCFormCPU" class="form-control"></div>
+      <div class="form-group"><label>Cantidad de Memoria RAM</label><input type="text" id="editPCFormRAM" class="form-control" placeholder="Ej: 8GB, 16GB"></div>
+      <div class="form-group"><label>Disco de Almacenamiento</label><input type="text" id="editPCFormDisco" class="form-control" placeholder="Ej: 256GB SSD"></div>
+      <div class="form-group"><label>Sistema Operativo Instalado</label><input type="text" id="editPCFormSO" class="form-control" placeholder="Ej: Windows 11, Ubuntu 24.04"></div>
+      <div class="form-group"><label>Fila (Coordenada X)</label><input type="number" id="editPCFormFila" class="form-control" min="1" required></div>
+      <div class="form-group"><label>Columna (Coordenada Y)</label><input type="number" id="editPCFormColumna" class="form-control" min="1" required></div>
+      <div class="form-group"><label>Estado del Hardware</label><select id="editPCFormEstado" class="form-control"><option value="ok">Funcionando Correctamente (OK)</option><option value="ko">Averiado / Fuera de Servicio</option><option value="reparacion">En Taller / Mantenimiento</option></select></div>
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Actualizar Ficha Técnica</button>
+    </form>
+  </div>
+  <br><button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cerrar Ventana</button>
+</div></div>
+
+<div id="modalCrearPC" class="modal-overlay"><div class="modal-window">
+  <h3>Dar de Alta Nuevo Equipo Informático</h3><br>
+  <form onsubmit="submitCrearPC(event)">
+    <div class="form-group"><label>Etiqueta / Nombre de Red</label><input type="text" id="addPCFormEtiqueta" class="form-control" required placeholder="Ej: PC-15, PC-MINI"></div>
+    <div class="form-group"><label>Procesador (CPU)</label><input type="text" id="addPCFormCPU" class="form-control" value="Intel i5"></div>
+    <div class="form-group"><label>Memoria RAM</label><input type="text" id="addPCFormRAM" class="form-control" value="8GB"></div>
+    <div class="form-group"><label>Disco</label><input type="text" id="addPCFormDisco" class="form-control" value="256GB SSD"></div>
+    <div class="form-group"><label>Sistema Operativo</label><input type="text" id="addPCFormSO" class="form-control" value="Ubuntu 22.04"></div>
+    <div class="form-group"><label>Fila de Ubicación en el Aula</label><input type="number" id="addPCFormFila" class="form-control" min="1" value="1" required></div>
+    <div class="form-group"><label>Columna de Ubicación en el Aula</label><input type="number" id="addPCFormColumna" class="form-control" min="1" value="1" required></div>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Insertar en Mapa de Sala</button><br><br>
     <button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cancelar</button>
   </form>
 </div></div>
@@ -286,11 +367,11 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 </div></div>
 
 <script>
-// !!! IMPORTANTE: Sustituye esta URL por tu dirección exacta de Render !!!
 const API = 'https://multicentro-1.onrender.com/api'; 
 
 let token = localStorage.getItem('token') || '';
 let currentUser = JSON.parse(localStorage.getItem('user')) || null;
+let currentCacheOrdenadores = []; // Almacén temporal de los PCs cargados en la sala activa
 
 window.addEventListener('DOMContentLoaded', () => {
   if (token && currentUser) showApp();
@@ -333,11 +414,13 @@ function showApp() {
   document.getElementById('userName').textContent = currentUser.nombre;
   document.getElementById('userBadge').textContent = currentUser.rol.toUpperCase();
   
-  if(currentUser.rol === 'admin') {
-    document.getElementById('nav-usuarios').style.display = 'flex';
-  } else {
-    document.getElementById('nav-usuarios').style.display = 'none';
-  }
+  const isAdmin = currentUser.rol === 'admin';
+  document.getElementById('nav-usuarios').style.display = isAdmin ? 'flex' : 'none';
+  document.getElementById('btn-admin-aula').style.display = isAdmin ? 'inline-flex' : 'none';
+  document.getElementById('admin-salas-section').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('btn-admin-material').style.display = isAdmin ? 'inline-flex' : 'none';
+  document.getElementById('btn-admin-pc').style.display = isAdmin ? 'inline-flex' : 'none';
+
   switchView('dashboard');
 }
 
@@ -385,7 +468,7 @@ async function loadDashboard() {
   } catch(e) { console.error(e); }
 }
 
-// LÓGICA: RESERVAS DE AULAS
+// LÓGICA: RESERVAS DE AULAS & GESTIÓN DE SALAS
 async function loadReservas() {
   try {
     const ev = await req('eventos');
@@ -395,7 +478,59 @@ async function loadReservas() {
     
     const sa = await req('salas');
     document.getElementById('resSala').innerHTML = sa.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+
+    if (currentUser.rol === 'admin') {
+      document.getElementById('table-admin-salas').innerHTML = sa.map(s => `
+        <tr>
+          <td><strong>${s.nombre}</strong></td>
+          <td><code>${s.codigo}</code></td>
+          <td><span class="badge badge-gray">${s.tipo.toUpperCase()}</span></td>
+          <td>${s.capacidad} Alumnos</td>
+          <td><small>${s.ubicacion || '—'}</small></td>
+          <td><button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditarAulaModal(${JSON.stringify(s).replace(/"/g, '&quot;')})">Editar Config</button></td>
+        </tr>
+      `).join('');
+    }
   } catch(e) { console.error(e); }
+}
+
+function openCrearAulaModal() {
+  document.getElementById('modalAulaTitle').textContent = 'Configurar Nuevo Espacio Escolar';
+  document.getElementById('aulaFormId').value = '';
+  document.getElementById('aulaFormNombre').value = '';
+  document.getElementById('aulaFormCodigo').value = '';
+  document.getElementById('aulaFormTipo').value = 'aula';
+  document.getElementById('aulaFormCapacidad').value = '25';
+  document.getElementById('aulaFormUbicacion').value = '';
+  openModal('modalAula');
+}
+
+function openEditarAulaModal(s) {
+  document.getElementById('modalAulaTitle').textContent = 'Modificar Parámetros de Aula';
+  document.getElementById('aulaFormId').value = s.id;
+  document.getElementById('aulaFormNombre').value = s.nombre;
+  document.getElementById('aulaFormCodigo').value = s.codigo;
+  document.getElementById('aulaFormTipo').value = s.tipo;
+  document.getElementById('aulaFormCapacidad').value = s.capacidad;
+  document.getElementById('aulaFormUbicacion').value = s.ubicacion || '';
+  openModal('modalAula');
+}
+
+async function submitAula(e) {
+  e.preventDefault();
+  const id = document.getElementById('aulaFormId').value;
+  const body = {
+    nombre: document.getElementById('aulaFormNombre').value,
+    codigo: document.getElementById('aulaFormCodigo').value,
+    tipo: document.getElementById('aulaFormTipo').value,
+    capacidad: parseInt(document.getElementById('aulaFormCapacidad').value),
+    ubicacion: document.getElementById('aulaFormUbicacion').value
+  };
+  try {
+    if(id) await req(`salas/${id}`, 'PUT', body);
+    else await req('salas', 'POST', body);
+    closeModal(); loadReservas();
+  } catch(err) { alert(err.message); }
 }
 
 async function submitReserva(e) {
@@ -417,9 +552,19 @@ async function submitReserva(e) {
 async function loadMateriales() {
   try {
     const mt = await req('materiales');
+    const isAdmin = currentUser.rol === 'admin';
+    
     document.getElementById('table-materiales').innerHTML = mt.length === 0
-      ? `<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">No hay materiales inventariados.</td></tr>`
-      : mt.map(m => `<tr><td><strong>${m.nombre}</strong></td><td><span class="badge badge-blue">${m.categoria.toUpperCase()}</span></td><td>${m.disponibles} de ${m.total_uds} unidades disp.</td><td>${m.descripcion||'Sin observaciones'}</td></tr>`).join('');
+      ? `<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No hay materiales inventariados.</td></tr>`
+      : mt.map(m => `
+        <tr>
+          <td><strong>${m.nombre}</strong></td>
+          <td><span class="badge badge-blue">${m.categoria.toUpperCase()}</span></td>
+          <td>${m.disponibles} de ${m.total_uds} unidades disp.</td>
+          <td><small>${m.descripcion||'Sin observaciones'}</small></td>
+          <td>${isAdmin ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditarMaterialModal(${JSON.stringify(m).replace(/"/g, '&quot;')})">Editar Ficha</button>` : '—'}</td>
+        </tr>
+      `).join('');
     
     document.getElementById('preMat').innerHTML = mt.map(m => `<option value="${m.id}">${m.nombre} (Disponibles: ${m.disponibles})</option>`).join('');
     
@@ -428,6 +573,42 @@ async function loadMateriales() {
       ? `<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">No existen registros de salida de material.</td></tr>`
       : pr.map(p => `<tr><td><strong>${p.material_nombre}</strong></td><td>${p.profesor_nombre}</td><td>${p.uds}</td><td>${fmtDT(p.inicio)}</td><td>${fmtDT(p.fin_previsto)}</td><td><span class="badge ${p.estado==='prestado'?'badge-red':'badge-green'}">${p.estado.toUpperCase()}</span></td><td>${p.estado==='prestado'?`<button class="btn btn-gold" style="padding:4px 8px; font-size:0.75rem;" onclick="devolverMat(${p.id})">Recibir Devolución</button>`:'—'}</td></tr>`).join('');
   } catch(e) { console.error(e); }
+}
+
+function openCrearMaterialModal() {
+  document.getElementById('modalMaterialTitle').textContent = 'Ingresar Recurso Nuevo al Almacén';
+  document.getElementById('matFormId').value = '';
+  document.getElementById('matFormNombre').value = '';
+  document.getElementById('matFormCategoria').value = 'portatiles';
+  document.getElementById('matFormTotal').value = '1';
+  document.getElementById('matFormDesc').value = '';
+  openModal('modalMaterial');
+}
+
+function openEditarMaterialModal(m) {
+  document.getElementById('modalMaterialTitle').textContent = 'Modificar Características del Recurso';
+  document.getElementById('matFormId').value = m.id;
+  document.getElementById('matFormNombre').value = m.nombre;
+  document.getElementById('matFormCategoria').value = m.categoria;
+  document.getElementById('matFormTotal').value = m.total_uds;
+  document.getElementById('matFormDesc').value = m.descripcion || '';
+  openModal('modalMaterial');
+}
+
+async function submitMaterial(e) {
+  e.preventDefault();
+  const id = document.getElementById('matFormId').value;
+  const body = {
+    nombre: document.getElementById('matFormNombre').value,
+    categoria: document.getElementById('matFormCategoria').value,
+    total_uds: parseInt(document.getElementById('matFormTotal').value),
+    descripcion: document.getElementById('matFormDesc').value
+  };
+  try {
+    if(id) await req(`materiales/${id}`, 'PUT', body);
+    else await req('materiales', 'POST', body);
+    closeModal(); loadMateriales();
+  } catch(err) { alert(err.message); }
 }
 
 async function submitPrestamo(e) {
@@ -448,7 +629,7 @@ async function devolverMat(id) {
   try { await req(`prestamos/${id}/devolver`, 'POST'); loadMateriales(); } catch(e) { alert(e.message); }
 }
 
-// LÓGICA: MAPAS DE ORDENADORES INTERACTIVOS
+// LÓGICA: MAPAS DE ORDENADORES INTERACTIVOS Y GESTIÓN DE EQUIPOS
 async function loadSalasPC() {
   try {
     const sl = await req('salas');
@@ -462,6 +643,7 @@ async function loadPCOrdenadores() {
   if(!sId) return;
   try {
     const ords = await req(`ordenadores/sala/${sId}`);
+    currentCacheOrdenadores = ords; 
     const c = document.getElementById('pcGridContainer');
     if(ords.length === 0) { c.innerHTML = '<p style="color:var(--text-muted); padding:10px;">Esta sala no tiene equipos informáticos mapeados en la base de datos.</p>'; return; }
     
@@ -469,31 +651,104 @@ async function loadPCOrdenadores() {
     c.style.gridTemplateRows = `repeat(${maxF}, 1fr)`; 
     c.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
     
-    c.innerHTML = ords.map(o => `<div class="pc-node pc-${o.estado}" style="grid-row:${o.fila}; grid-column:${o.columna};" onclick="clickPC(${o.id},'${o.etiqueta}','${o.estado}')">🖥️<br>${o.etiqueta}</div>`).join('');
+    c.innerHTML = ords.map(o => `<div class="pc-node pc-${o.estado}" style="grid-row:${o.fila}; grid-column:${o.columna};" onclick="clickPC(${o.id})">🖥️<br>${o.etiqueta}</div>`).join('');
   } catch(e) { console.error(e); }
 }
 
-function clickPC(id, et, est) {
-  if(est === 'ko') { alert(`El equipo ${et} está reportado como AVERIADO y pendiente de revisión.`); return; }
-  document.getElementById('incidenciasDesc').value = '';
-  document.getElementById('incidenciaPCId').value = id;
-  document.getElementById('incidenciaPCLabel').textContent = `Identificador de Equipo: ${et}`;
+function clickPC(id) {
+  const target = currentCacheOrdenadores.find(o => o.id === id);
+  if(!target) return;
+
+  document.getElementById('incidenciaPCId').value = target.id;
+  document.getElementById('incidenciaPCLabel').innerHTML = `Equipo: <strong>${target.etiqueta}</strong><br><small style="color:var(--text-muted);">${target.cpu || 'i5'} | ${target.ram || '8GB'} RAM | ${target.sistema_operativo || 'Ubuntu'}</small>`;
+  document.getElementById('incidenciaDesc').value = '';
+
+  const isAdmin = currentUser.role === 'admin' || currentUser.rol === 'admin';
+  const adminZone = document.getElementById('admin-pc-edit-zone');
+  
+  if (isAdmin) {
+    adminZone.style.display = 'block';
+    document.getElementById('pcModalActionTitle').textContent = 'Configurar Ficha e Incidencias del Equipo';
+    document.getElementById('editPCFormEtiqueta').value = target.etiqueta;
+    document.getElementById('editPCFormCPU').value = target.cpu || '';
+    document.getElementById('editPCFormRAM').value = target.ram || '';
+    document.getElementById('editPCFormDisco').value = target.disco || '';
+    document.getElementById('editPCFormSO').value = target.sistema_operativo || '';
+    document.getElementById('editPCFormFila').value = target.fila;
+    document.getElementById('editPCFormColumna').value = target.columna;
+    document.getElementById('editPCFormEstado').value = target.estado;
+  } else {
+    adminZone.style.display = 'none';
+    document.getElementById('pcModalActionTitle').textContent = 'Reportar Parte de Avería';
+  }
   openModal('modalIncidencia');
+}
+
+function openCrearPCModal() {
+  const sId = document.getElementById('select-sala-pc').value;
+  if(!sId) { alert('Selecciona primero un aula informática válida.'); return; }
+  openModal('modalCrearPC');
+}
+
+async function submitCrearPC(e) {
+  e.preventDefault();
+  const sId = document.getElementById('select-sala-pc').value;
+  const body = {
+    sala_id: parseInt(sId),
+    etiqueta: document.getElementById('addPCFormEtiqueta').value,
+    cpu: document.getElementById('addPCFormCPU').value,
+    ram: document.getElementById('addPCFormRAM').value,
+    disco: document.getElementById('addPCFormDisco').value,
+    sistema_operativo: document.getElementById('addPCFormSO').value,
+    fila: parseInt(document.getElementById('addPCFormFila').value),
+    columna: parseInt(document.getElementById('addPCFormColumna').value)
+  };
+  try {
+    await req('ordenadores', 'POST', body);
+    closeModal(); loadPCOrdenadores();
+  } catch(err) { alert(err.message); }
+}
+
+async function submitModificarPC(e) {
+  e.preventDefault();
+  const id = document.getElementById('incidenciaPCId').value;
+  const body = {
+    etiqueta: document.getElementById('editPCFormEtiqueta').value,
+    cpu: document.getElementById('editPCFormCPU').value,
+    ram: document.getElementById('editPCFormRAM').value,
+    disco: document.getElementById('editPCFormDisco').value,
+    sistema_operativo: document.getElementById('editPCFormSO').value,
+    fila: parseInt(document.getElementById('editPCFormFila').value),
+    columna: parseInt(document.getElementById('editPCFormColumna').value),
+    estado: document.getElementById('editPCFormEstado').value
+  };
+  try {
+    await req(`ordenadores/${id}`, 'PUT', body);
+    closeModal(); loadPCOrdenadores();
+  } catch(err) { alert(err.message); }
 }
 
 async function submitIncidencia(e) {
   e.preventDefault();
+  const desc = document.getElementById('incidenciaDesc').value;
+  if(!desc.trim()) { alert('Por favor, escribe una descripción de la avería.'); return; }
   try { 
     await req('incidencias', 'POST', { 
       ordenador_id: document.getElementById('incidenciaPCId').value, 
-      descripcion: document.getElementById('incidenciaDesc').value 
+      descripcion: desc 
     }); 
     closeModal(); loadPCOrdenadores(); 
   } catch(err) { alert(err.message); }
 }
 
-// LÓGICA: GESTIÓN DE CLAUSTRO (ADMINISTRACIÓN)
+// LÓGICA: GESTIÓN DE CLAUSTRO (ADMINISTRACIÓN - PROTEGIDA)
 async function loadUsuarios() {
+  const contentBox = document.getElementById('admin-users-content');
+  const deniedBox = document.getElementById('admin-users-denied');
+  if (!currentUser || currentUser.rol !== 'admin') {
+    contentBox.style.display = 'none'; deniedBox.style.display = 'block'; return;
+  }
+  contentBox.style.display = 'block'; deniedBox.style.display = 'none';
   try {
     const us = await req('usuarios');
     document.getElementById('table-usuarios').innerHTML = us.map(u => `
@@ -501,17 +756,16 @@ async function loadUsuarios() {
         <td><strong>${u.username}</strong></td>
         <td>${u.nombre}</td>
         <td>${u.email}</td>
-        <td><span class="badge badge-gray">${u.rol.toUpperCase()}</span></td>
+        <td><span class="badge ${u.rol === 'admin' ? 'badge-blue' : 'badge-gray'}">${u.rol.toUpperCase()}</span></td>
         <td><span class="badge ${u.activo ? 'badge-green' : 'badge-red'}">${u.activo ? 'ALTA' : 'BAJA'}</span></td>
-        <td>
-          <button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditarUsuarioModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Editar Ficha</button>
-        </td>
+        <td><button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditarUsuarioModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Editar Ficha</button></td>
       </tr>
     `).join('');
   } catch(e) { console.error(e); }
 }
 
 function openCrearUsuarioModal() {
+  if (currentUser.rol !== 'admin') return;
   document.getElementById('modalUsuarioTitle').textContent = 'Registrar Profesor / Alta Claustro';
   document.getElementById('userFormId').value = '';
   document.getElementById('userFormUsername').value = '';
@@ -525,6 +779,7 @@ function openCrearUsuarioModal() {
 }
 
 function openEditarUsuarioModal(u) {
+  if (currentUser.rol !== 'admin') return;
   document.getElementById('modalUsuarioTitle').textContent = 'Modificar Ficha de Docente';
   document.getElementById('userFormId').value = u.id;
   document.getElementById('userFormUsername').value = u.username;
@@ -540,6 +795,7 @@ function openEditarUsuarioModal(u) {
 
 async function submitUsuario(e) {
   e.preventDefault();
+  if (currentUser.rol !== 'admin') { closeModal(); return; }
   const id = document.getElementById('userFormId').value;
   const body = {
     username: document.getElementById('userFormUsername').value,
@@ -547,10 +803,8 @@ async function submitUsuario(e) {
     email: document.getElementById('userFormEmail').value,
     rol: document.getElementById('userFormRol').value,
   };
-  
   const pass = document.getElementById('userFormPassword').value;
   if(pass) body.password = pass;
-  
   try {
     if(id) {
       body.activo = document.getElementById('userFormActivo').value === 'true';
