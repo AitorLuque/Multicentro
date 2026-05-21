@@ -83,6 +83,13 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 .btn-gold { background: var(--gold); color: var(--white); }
 .btn-gold:hover { background: var(--gold-lt); }
 .btn-danger { background: var(--red); color: var(--white); }
+.btn-danger:hover { background: #8e1818; }
+.btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+.btn-ghost { background: transparent; color: var(--navy); border: 1px solid var(--gray-2); }
+.btn-ghost:hover { background: var(--gray-1); }
+.btn-ghost-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+.btn-ghost-danger:hover { background: var(--red); color: var(--white); }
+.actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* Distribución de Equipos Informáticos */
 .grid-pc-layout { display: inline-grid; gap: 10px; background: var(--white); padding: 20px; border-radius: 8px; border: 1px solid var(--gray-2); max-width: 100%; overflow-x: auto; }
@@ -179,12 +186,12 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
       <h3>Cuadrante General de Ocupación</h3>
       <div style="display: flex; gap: 10px;">
         <button id="btn-admin-aula" class="btn btn-gold" onclick="openCrearAulaModal()" style="display:none;">+ Configurar Aula</button>
-        <button class="btn btn-primary" onclick="openModal('modalReserva')">+ Agendar Nueva Reserva</button>
+        <button class="btn btn-primary" onclick="openCrearReservaModal()">+ Agendar Nueva Reserva</button>
       </div>
     </div>
     <div class="table-container">
       <table>
-        <thead><tr><th>Espacio / Aula</th><th>Docente</th><th>Asunto / Módulo</th><th>Tipo</th><th>Horario de Inicio</th><th>Horario de Fin</th></tr></thead>
+        <thead><tr><th>Espacio / Aula</th><th>Docente</th><th>Asunto / Módulo</th><th>Tipo</th><th>Horario de Inicio</th><th>Horario de Fin</th><th>Operaciones</th></tr></thead>
         <tbody id="table-reservas"></tbody>
       </table>
     </div>
@@ -257,12 +264,13 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
 </main>
 
 <div id="modalReserva" class="modal-overlay"><div class="modal-window">
-  <h3>Nueva Reserva de Espacio</h3><br>
+  <h3 id="modalReservaTitle">Nueva Reserva de Espacio</h3><br>
   <form onsubmit="submitReserva(event)">
+    <input type="hidden" id="resId">
     <div class="form-group"><label>Selecciona el Aula</label><select id="resSala" class="form-control" required></select></div>
     <div class="form-group"><label>Asunto / Actividad</label><input type="text" id="resTitulo" class="form-control" required placeholder="Ej: Clase de Informática Avanzada"></div>
     <div class="form-group"><label>Notas adicionales</label><input type="text" id="resDesc" class="form-control" placeholder="Opcional"></div>
-    <div class="form-group"><label>Tipo de Evento</label><select id="resTipo" class="form-control"><option value="general">Clase General</option><option value="examen">Sesión de Examen</option><option value="charla">Charla / Evento</option></select></div>
+    <div class="form-group"><label>Tipo de Evento</label><select id="resTipo" class="form-control"><option value="general">Clase General</option><option value="examen">Sesión de Examen</option><option value="charla">Charla / Evento</option><option value="tutoria">Tutoría</option><option value="actividad">Actividad</option></select></div>
     <div class="form-group"><label>Fecha e Hora de Inicio</label><input type="datetime-local" id="resInicio" class="form-control" required></div>
     <div class="form-group"><label>Fecha e Hora de Fin</label><input type="datetime-local" id="resFin" class="form-control" required></div>
     <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Confirmar Horario</button><br><br>
@@ -332,6 +340,7 @@ th { background: var(--gray-1); font-weight: 600; color: var(--navy); }
       <div class="form-group"><label>Estado del Hardware</label><select id="editPCFormEstado" class="form-control"><option value="ok">Funcionando Correctamente (OK)</option><option value="ko">Averiado / Fuera de Servicio</option><option value="reparacion">En Taller / Mantenimiento</option></select></div>
       <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Actualizar Ficha Técnica</button>
     </form>
+    <button type="button" class="btn btn-danger" onclick="eliminarPC()" style="width:100%; justify-content:center; margin-top:10px;">🗑️ Eliminar este Ordenador</button>
   </div>
   <br><button type="button" class="btn btn-gold" onclick="closeModal()" style="width:100%; justify-content:center;">Cerrar Ventana</button>
 </div></div>
@@ -469,29 +478,84 @@ async function loadDashboard() {
 }
 
 // LÓGICA: RESERVAS DE AULAS & GESTIÓN DE SALAS
+let currentCacheEventos = [];
+let currentCacheSalas = [];
+
 async function loadReservas() {
   try {
     const ev = await req('eventos');
+    currentCacheEventos = ev;
+    const isAdmin = currentUser.rol === 'admin';
     document.getElementById('table-reservas').innerHTML = ev.length === 0
-      ? `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Sin historial de reservas activas.</td></tr>`
-      : ev.map(e => `<tr><td><strong>${e.sala_nombre}</strong></td><td>${e.profesor_nombre}</td><td>${e.titulo}</td><td><span class="badge badge-gray">${e.tipo.toUpperCase()}</span></td><td>${fmtDT(e.inicio)}</td><td>${fmtDT(e.fin)}</td></tr>`).join('');
-    
+      ? `<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">Sin historial de reservas activas.</td></tr>`
+      : ev.map(e => {
+          const puedeGestionar = isAdmin || e.profesor_id === currentUser.id;
+          const acciones = puedeGestionar
+            ? `<div class="actions-cell">
+                 <button class="btn btn-ghost btn-sm" onclick="openEditarReservaModal(${e.id})">Editar</button>
+                 <button class="btn btn-ghost-danger btn-sm" onclick="eliminarReserva(${e.id})">Eliminar</button>
+               </div>`
+            : '—';
+          return `<tr><td><strong>${e.sala_nombre}</strong></td><td>${e.profesor_nombre}</td><td>${e.titulo}</td><td><span class="badge badge-gray">${e.tipo.toUpperCase()}</span></td><td>${fmtDT(e.inicio)}</td><td>${fmtDT(e.fin)}</td><td>${acciones}</td></tr>`;
+        }).join('');
+
     const sa = await req('salas');
+    currentCacheSalas = sa;
     document.getElementById('resSala').innerHTML = sa.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
 
-    if (currentUser.rol === 'admin') {
-      document.getElementById('table-admin-salas').innerHTML = sa.map(s => `
-        <tr>
-          <td><strong>${s.nombre}</strong></td>
-          <td><code>${s.codigo}</code></td>
-          <td><span class="badge badge-gray">${s.tipo.toUpperCase()}</span></td>
-          <td>${s.capacidad} Alumnos</td>
-          <td><small>${s.ubicacion || '—'}</small></td>
-          <td><button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditarAulaModal(${JSON.stringify(s).replace(/"/g, '&quot;')})">Editar Config</button></td>
-        </tr>
-      `).join('');
+    if (isAdmin) {
+      document.getElementById('table-admin-salas').innerHTML = sa.length === 0
+        ? `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Sin aulas registradas.</td></tr>`
+        : sa.map(s => `
+          <tr>
+            <td><strong>${s.nombre}</strong></td>
+            <td><code>${s.codigo}</code></td>
+            <td><span class="badge badge-gray">${s.tipo.toUpperCase()}</span></td>
+            <td>${s.capacidad} Alumnos</td>
+            <td><small>${s.ubicacion || '—'}</small></td>
+            <td><div class="actions-cell">
+              <button class="btn btn-ghost btn-sm" onclick='openEditarAulaModal(${JSON.stringify(s).replace(/'/g, "&#39;")})'>Editar</button>
+              <button class="btn btn-ghost-danger btn-sm" onclick="eliminarAula(${s.id}, '${(s.nombre || '').replace(/'/g, "\\'")}')">Eliminar</button>
+            </div></td>
+          </tr>
+        `).join('');
     }
   } catch(e) { console.error(e); }
+}
+
+function openCrearReservaModal() {
+  document.getElementById('modalReservaTitle').textContent = 'Nueva Reserva de Espacio';
+  document.getElementById('resId').value = '';
+  document.getElementById('resTitulo').value = '';
+  document.getElementById('resDesc').value = '';
+  document.getElementById('resTipo').value = 'general';
+  document.getElementById('resInicio').value = '';
+  document.getElementById('resFin').value = '';
+  openModal('modalReserva');
+}
+
+function openEditarReservaModal(id) {
+  const ev = currentCacheEventos.find(x => x.id === id);
+  if (!ev) return;
+  document.getElementById('modalReservaTitle').textContent = 'Modificar Reserva';
+  document.getElementById('resId').value = ev.id;
+  document.getElementById('resSala').value = ev.sala_id;
+  document.getElementById('resTitulo').value = ev.titulo;
+  document.getElementById('resDesc').value = ev.descripcion || '';
+  document.getElementById('resTipo').value = ev.tipo;
+  document.getElementById('resInicio').value = toLocalDT(ev.inicio);
+  document.getElementById('resFin').value = toLocalDT(ev.fin);
+  openModal('modalReserva');
+}
+
+async function eliminarReserva(id) {
+  if(!confirm('¿Eliminar definitivamente esta reserva?')) return;
+  try { await req(`eventos/${id}`, 'DELETE'); loadReservas(); } catch(e) { alert(e.message); }
+}
+
+async function eliminarAula(id, nombre) {
+  if(!confirm(`¿Eliminar el aula "${nombre}"?\n\nAtención: se borrarán también las reservas y ordenadores asociados.`)) return;
+  try { await req(`salas/${id}`, 'DELETE'); loadReservas(); } catch(e) { alert(e.message); }
 }
 
 function openCrearAulaModal() {
@@ -538,15 +602,18 @@ async function submitAula(e) {
 
 async function submitReserva(e) {
   e.preventDefault();
+  const id = document.getElementById('resId').value;
+  const body = {
+    sala_id: document.getElementById('resSala').value,
+    titulo: document.getElementById('resTitulo').value,
+    descripcion: document.getElementById('resDesc').value,
+    tipo: document.getElementById('resTipo').value,
+    inicio: document.getElementById('resInicio').value,
+    fin: document.getElementById('resFin').value
+  };
   try {
-    await req('eventos', 'POST', {
-      sala_id: document.getElementById('resSala').value,
-      titulo: document.getElementById('resTitulo').value,
-      descripcion: document.getElementById('resDesc').value,
-      tipo: document.getElementById('resTipo').value,
-      inicio: document.getElementById('resInicio').value,
-      fin: document.getElementById('resFin').value
-    });
+    if (id) await req(`eventos/${id}`, 'PUT', body);
+    else await req('eventos', 'POST', body);
     closeModal(); loadReservas();
   } catch(err) { alert(err.message); }
 }
@@ -565,17 +632,35 @@ async function loadMateriales() {
           <td><span class="badge badge-blue">${m.categoria.toUpperCase()}</span></td>
           <td>${m.disponibles} de ${m.total_uds} unidades disp.</td>
           <td><small>${m.descripcion||'Sin observaciones'}</small></td>
-          <td>${isAdmin ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditarMaterialModal(${JSON.stringify(m).replace(/"/g, '&quot;')})">Editar Ficha</button>` : '—'}</td>
+          <td>${isAdmin ? `<div class="actions-cell">
+              <button class="btn btn-ghost btn-sm" onclick='openEditarMaterialModal(${JSON.stringify(m).replace(/'/g, "&#39;")})'>Editar</button>
+              <button class="btn btn-ghost-danger btn-sm" onclick="eliminarMaterial(${m.id}, '${(m.nombre || '').replace(/'/g, "\\'")}')">Eliminar</button>
+            </div>` : '—'}</td>
         </tr>
       `).join('');
-    
+
     document.getElementById('preMat').innerHTML = mt.map(m => `<option value="${m.id}">${m.nombre} (Disponibles: ${m.disponibles})</option>`).join('');
-    
+
     const pr = await req('prestamos');
     document.getElementById('table-prestamos-historial').innerHTML = pr.length === 0
       ? `<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">No existen registros de salida de material.</td></tr>`
-      : pr.map(p => `<tr><td><strong>${p.material_nombre}</strong></td><td>${p.profesor_nombre}</td><td>${p.uds}</td><td>${fmtDT(p.inicio)}</td><td>${fmtDT(p.fin_previsto)}</td><td><span class="badge ${p.estado==='prestado'?'badge-red':'badge-green'}">${p.estado.toUpperCase()}</span></td><td>${p.estado==='prestado'?`<button class="btn btn-gold" style="padding:4px 8px; font-size:0.75rem;" onclick="devolverMat(${p.id})">Recibir Devolución</button>`:'—'}</td></tr>`).join('');
+      : pr.map(p => {
+          const accs = [];
+          if (p.estado === 'prestado') accs.push(`<button class="btn btn-gold btn-sm" onclick="devolverMat(${p.id})">Devolución</button>`);
+          if (isAdmin) accs.push(`<button class="btn btn-ghost-danger btn-sm" onclick="eliminarPrestamo(${p.id})">Eliminar</button>`);
+          return `<tr><td><strong>${p.material_nombre}</strong></td><td>${p.profesor_nombre}</td><td>${p.uds}</td><td>${fmtDT(p.inicio)}</td><td>${fmtDT(p.fin_previsto)}</td><td><span class="badge ${p.estado==='prestado'?'badge-red':'badge-green'}">${p.estado.toUpperCase()}</span></td><td>${accs.length ? `<div class="actions-cell">${accs.join('')}</div>` : '—'}</td></tr>`;
+        }).join('');
   } catch(e) { console.error(e); }
+}
+
+async function eliminarMaterial(id, nombre) {
+  if(!confirm(`¿Eliminar el material "${nombre}" del inventario?`)) return;
+  try { await req(`materiales/${id}`, 'DELETE'); loadMateriales(); } catch(e) { alert(e.message); }
+}
+
+async function eliminarPrestamo(id) {
+  if(!confirm('¿Eliminar este registro de préstamo? Si estaba activo, las unidades volverán al stock.')) return;
+  try { await req(`prestamos/${id}`, 'DELETE'); loadMateriales(); } catch(e) { alert(e.message); }
 }
 
 function openCrearMaterialModal() {
@@ -733,6 +818,13 @@ async function submitModificarPC(e) {
   } catch(err) { alert(err.message); }
 }
 
+async function eliminarPC() {
+  const id = document.getElementById('incidenciaPCId').value;
+  if(!id) return;
+  if(!confirm('¿Eliminar este ordenador del mapa? Se borrarán también sus incidencias.')) return;
+  try { await req(`ordenadores/${id}`, 'DELETE'); closeModal(); loadPCOrdenadores(); } catch(e) { alert(e.message); }
+}
+
 async function submitIncidencia(e) {
   e.preventDefault();
   const desc = document.getElementById('incidenciaDesc').value;
@@ -756,17 +848,30 @@ async function loadUsuarios() {
   contentBox.style.display = 'block'; deniedBox.style.display = 'none';
   try {
     const us = await req('usuarios');
-    document.getElementById('table-usuarios').innerHTML = us.map(u => `
+    document.getElementById('table-usuarios').innerHTML = us.map(u => {
+      const esYo = u.id === currentUser.id;
+      const btnEliminar = esYo
+        ? `<button class="btn btn-ghost-danger btn-sm" disabled title="No puedes eliminar tu propia cuenta" style="opacity:0.4; cursor:not-allowed;">Eliminar</button>`
+        : `<button class="btn btn-ghost-danger btn-sm" onclick="eliminarUsuario(${u.id}, '${(u.nombre || '').replace(/'/g, "\\'")}')">Eliminar</button>`;
+      return `
       <tr>
         <td><strong>${u.username}</strong></td>
         <td>${u.nombre}</td>
         <td>${u.email}</td>
         <td><span class="badge ${u.rol === 'admin' ? 'badge-blue' : 'badge-gray'}">${u.rol.toUpperCase()}</span></td>
         <td><span class="badge ${u.activo ? 'badge-green' : 'badge-red'}">${u.activo ? 'ALTA' : 'BAJA'}</span></td>
-        <td><button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditarUsuarioModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Editar Ficha</button></td>
+        <td><div class="actions-cell">
+          <button class="btn btn-ghost btn-sm" onclick='openEditarUsuarioModal(${JSON.stringify(u).replace(/'/g, "&#39;")})'>Editar</button>
+          ${btnEliminar}
+        </div></td>
       </tr>
-    `).join('');
+    `;}).join('');
   } catch(e) { console.error(e); }
+}
+
+async function eliminarUsuario(id, nombre) {
+  if(!confirm(`¿Eliminar definitivamente al usuario "${nombre}"?\n\nAtención: se borrarán también sus reservas y préstamos.`)) return;
+  try { await req(`usuarios/${id}`, 'DELETE'); loadUsuarios(); } catch(e) { alert(e.message); }
 }
 
 function openCrearUsuarioModal() {
@@ -825,6 +930,13 @@ async function submitUsuario(e) {
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
 function fmtDT(d) { return d ? new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—'; }
+function toLocalDT(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const off = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - off * 60000);
+  return local.toISOString().slice(0, 16);
+}
 </script>
 </body>
 </html>

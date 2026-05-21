@@ -95,6 +95,18 @@ app.put('/api/usuarios/:id', auth, role('admin'), async (req, res) => {
   }
 });
 
+app.delete('/api/usuarios/:id', auth, role('admin'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (req.user.id === id) return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta.' });
+  try {
+    const result = await q('DELETE FROM usuarios WHERE id=$1 RETURNING id', [id]);
+    if (result.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se puede eliminar el usuario (puede tener reservas o préstamos asociados).' });
+  }
+});
+
 // ============================================================
 // DASHBOARD GLOBAL
 // ============================================================
@@ -124,6 +136,43 @@ app.get('/api/salas', auth, async (req, res) => {
   try { res.json(await q('SELECT * FROM salas ORDER BY nombre')); } catch (err) { res.status(500).json({ error: 'Error.' }); }
 });
 
+app.post('/api/salas', auth, role('admin'), async (req, res) => {
+  const { planta_id, nombre, codigo, tipo, capacidad, ubicacion } = req.body;
+  if (!nombre || !codigo || !tipo) return res.status(400).json({ error: 'Faltan datos obligatorios.' });
+  try {
+    await q(
+      `INSERT INTO salas (planta_id, nombre, codigo, tipo, capacidad, ubicacion) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [planta_id || 1, nombre, codigo, tipo, capacidad || 0, ubicacion || null]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo crear el aula (¿código duplicado?).' });
+  }
+});
+
+app.put('/api/salas/:id', auth, role('admin'), async (req, res) => {
+  const { planta_id, nombre, codigo, tipo, capacidad, ubicacion, estado } = req.body;
+  try {
+    await q(
+      `UPDATE salas SET planta_id=$1, nombre=$2, codigo=$3, tipo=$4, capacidad=$5, ubicacion=$6, estado=COALESCE($7, estado) WHERE id=$8`,
+      [planta_id || 1, nombre, codigo, tipo, capacidad || 0, ubicacion || null, estado || null, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo actualizar el aula.' });
+  }
+});
+
+app.delete('/api/salas/:id', auth, role('admin'), async (req, res) => {
+  try {
+    const result = await q('DELETE FROM salas WHERE id=$1 RETURNING id', [req.params.id]);
+    if (result.length === 0) return res.status(404).json({ error: 'Aula no encontrada.' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo eliminar el aula.' });
+  }
+});
+
 app.get('/api/eventos', auth, async (req, res) => {
   try {
     res.json(await q(`SELECT e.*, s.nombre AS sala_nombre, u.nombre AS profesor_nombre FROM eventos e JOIN salas s ON s.id=e.sala_id JOIN usuarios u ON u.id=e.profesor_id WHERE e.estado='activo' ORDER BY e.inicio`));
@@ -140,11 +189,93 @@ app.post('/api/eventos', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Error.' }); }
 });
 
+app.put('/api/eventos/:id', auth, async (req, res) => {
+  const { sala_id, titulo, descripcion, tipo, inicio, fin } = req.body;
+  try {
+    const [evento] = await q('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    if (!evento) return res.status(404).json({ error: 'Reserva no encontrada.' });
+    if (req.user.rol !== 'admin' && evento.profesor_id !== req.user.id) {
+      return res.status(403).json({ error: 'Solo el administrador o el profesor que la creó pueden modificar esta reserva.' });
+    }
+    const solapados = await q(
+      `SELECT * FROM eventos WHERE sala_id=$1 AND estado='activo' AND id<>$2 AND NOT (fin <= $3 OR inicio >= $4)`,
+      [sala_id, req.params.id, inicio, fin]
+    );
+    if (solapados.length > 0) return res.status(400).json({ error: 'Horario ya ocupado en esa aula.' });
+    await q(
+      `UPDATE eventos SET sala_id=$1, titulo=$2, descripcion=$3, tipo=$4, inicio=$5, fin=$6 WHERE id=$7`,
+      [sala_id, titulo, descripcion, tipo, inicio, fin, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) { res.status(400).json({ error: 'No se pudo actualizar la reserva.' }); }
+});
+
+app.delete('/api/eventos/:id', auth, async (req, res) => {
+  try {
+    const [evento] = await q('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    if (!evento) return res.status(404).json({ error: 'Reserva no encontrada.' });
+    if (req.user.rol !== 'admin' && evento.profesor_id !== req.user.id) {
+      return res.status(403).json({ error: 'Solo el administrador o el profesor que la creó pueden eliminar esta reserva.' });
+    }
+    await q('DELETE FROM eventos WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(400).json({ error: 'No se pudo eliminar la reserva.' }); }
+});
+
 // ============================================================
 // MATERIALES
 // ============================================================
 app.get('/api/materiales', auth, async (req, res) => {
   try { res.json(await q('SELECT * FROM materiales WHERE activo=TRUE ORDER BY nombre')); } catch (err) { res.status(500).json({ error: 'Error.' }); }
+});
+
+app.post('/api/materiales', auth, role('admin'), async (req, res) => {
+  const { nombre, categoria, total_uds, descripcion } = req.body;
+  if (!nombre || !categoria) return res.status(400).json({ error: 'Faltan datos obligatorios.' });
+  try {
+    await q(
+      `INSERT INTO materiales (nombre, categoria, total_uds, disponibles, descripcion) VALUES ($1, $2, $3, $3, $4)`,
+      [nombre, categoria, total_uds || 1, descripcion || null]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo crear el material.' });
+  }
+});
+
+app.put('/api/materiales/:id', auth, role('admin'), async (req, res) => {
+  const { nombre, categoria, total_uds, descripcion } = req.body;
+  try {
+    const [mat] = await q('SELECT total_uds, disponibles FROM materiales WHERE id=$1', [req.params.id]);
+    if (!mat) return res.status(404).json({ error: 'Material no encontrado.' });
+    const enUso = mat.total_uds - mat.disponibles;
+    const nuevoTotal = parseInt(total_uds);
+    if (nuevoTotal < enUso) {
+      return res.status(400).json({ error: `No se puede reducir total a ${nuevoTotal}; hay ${enUso} unidades prestadas.` });
+    }
+    const nuevasDisp = nuevoTotal - enUso;
+    await q(
+      `UPDATE materiales SET nombre=$1, categoria=$2, total_uds=$3, disponibles=$4, descripcion=$5 WHERE id=$6`,
+      [nombre, categoria, nuevoTotal, nuevasDisp, descripcion || null, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo actualizar el material.' });
+  }
+});
+
+app.delete('/api/materiales/:id', auth, role('admin'), async (req, res) => {
+  try {
+    const activos = await q("SELECT COUNT(*) FROM prestamos_material WHERE material_id=$1 AND estado='prestado'", [req.params.id]);
+    if (parseInt(activos[0].count) > 0) {
+      return res.status(400).json({ error: 'No se puede eliminar: existen préstamos activos de este material.' });
+    }
+    const result = await q('DELETE FROM materiales WHERE id=$1 RETURNING id', [req.params.id]);
+    if (result.length === 0) return res.status(404).json({ error: 'Material no encontrado.' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo eliminar el material.' });
+  }
 });
 
 app.get('/api/prestamos', auth, async (req, res) => {
@@ -176,11 +307,65 @@ app.post('/api/prestamos/:id/devolver', auth, async (req, res) => {
   } catch (err) { await q('ROLLBACK'); res.status(500).json({ error: 'Error.' }); }
 });
 
+app.delete('/api/prestamos/:id', auth, role('admin'), async (req, res) => {
+  try {
+    const [p] = await q('SELECT * FROM prestamos_material WHERE id=$1', [req.params.id]);
+    if (!p) return res.status(404).json({ error: 'Préstamo no encontrado.' });
+    await q('BEGIN');
+    if (p.estado === 'prestado') {
+      await q('UPDATE materiales SET disponibles = disponibles + $1 WHERE id=$2', [p.uds, p.material_id]);
+    }
+    await q('DELETE FROM prestamos_material WHERE id=$1', [req.params.id]);
+    await q('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await q('ROLLBACK');
+    res.status(400).json({ error: 'No se pudo eliminar el préstamo.' });
+  }
+});
+
 // ============================================================
 // MAPAS ORDENADORES
 // ============================================================
 app.get('/api/ordenadores/sala/:salaId', auth, async (req, res) => {
   try { res.json(await q('SELECT * FROM ordenadores WHERE sala_id=$1 ORDER BY fila, columna', [req.params.salaId])); } catch (err) { res.status(500).json({ error: 'Error.' }); }
+});
+
+app.post('/api/ordenadores', auth, role('admin'), async (req, res) => {
+  const { sala_id, etiqueta, cpu, ram, disco, sistema_operativo, fila, columna } = req.body;
+  if (!sala_id || !etiqueta || !fila || !columna) return res.status(400).json({ error: 'Faltan datos obligatorios.' });
+  try {
+    await q(
+      `INSERT INTO ordenadores (sala_id, etiqueta, cpu, ram, disco, sistema_operativo, fila, columna) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [sala_id, etiqueta, cpu || null, ram || null, disco || null, sistema_operativo || null, fila, columna]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo crear el ordenador (¿posición duplicada?).' });
+  }
+});
+
+app.put('/api/ordenadores/:id', auth, role('admin'), async (req, res) => {
+  const { sala_id, etiqueta, cpu, ram, disco, sistema_operativo, fila, columna, estado } = req.body;
+  try {
+    await q(
+      `UPDATE ordenadores SET sala_id=$1, etiqueta=$2, cpu=$3, ram=$4, disco=$5, sistema_operativo=$6, fila=$7, columna=$8, estado=COALESCE($9, estado) WHERE id=$10`,
+      [sala_id, etiqueta, cpu || null, ram || null, disco || null, sistema_operativo || null, fila, columna, estado || null, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo actualizar el ordenador.' });
+  }
+});
+
+app.delete('/api/ordenadores/:id', auth, role('admin'), async (req, res) => {
+  try {
+    const result = await q('DELETE FROM ordenadores WHERE id=$1 RETURNING id', [req.params.id]);
+    if (result.length === 0) return res.status(404).json({ error: 'Ordenador no encontrado.' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo eliminar el ordenador.' });
+  }
 });
 
 app.post('/api/incidencias', auth, async (req, res) => {
